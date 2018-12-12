@@ -9,7 +9,7 @@ local TICKS_PER_SECOND = 10
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
 local MOVES_PER_TILE = 5
 local START_POS = {x=0,y=0}
-local VSYNC = true
+local VSYNC = false
 local FULLSCREENTYPE = "desktop"
 -- local FULLSCREENTYPE = "exclusive"
 
@@ -117,7 +117,7 @@ function love.draw()
   love.graphics.setColor(clr.WHITE)
   love.graphics.draw(glo.map.image, centerX-pos.x, centerY-pos.y)
   -- Player
-  love.graphics.setColor(clr.BLUE)
+  love.graphics.setColor(clr.LGREEN)
   --dbg.printf("DRAW: %f,%f", pos.x, pos.y)
   local playerSize = (MOVES_PER_TILE-2)/MOVES_PER_TILE
   rect("fill", centerX, centerY, math.floor(playerSize*tileW), math.floor(playerSize*tileW))
@@ -134,7 +134,9 @@ function loadMap()
     { c=clr.GREEN },
     { c=clr.YELLOW },
   }
-  math.randomseed(os.time())
+  seed = os.time()
+  print("Map seed: "..seed)
+  math.randomseed(seed)
   local map = {}
   map.tileSize = { w=40, h=40 }
   map.tiles = {}
