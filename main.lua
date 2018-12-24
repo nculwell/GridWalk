@@ -20,7 +20,7 @@ local glo = {
   paused=false,
   quitting=false,
   player = {
-    pos = START_POS, mov = START_POS
+    mov = { prv=START_POS, nxt=START_POS, dst=START_POS }
   },
   moveKeys = {}
 }
@@ -66,37 +66,56 @@ function toggleFullscreen()
   love.window.setMode(screenW, screenH, newFlags)
 end
 
-function moveChar(c)
-  if c.mov.x == c.pos.x and c.mov.y == c.pos.y then
-    return false
-  elseif c.mov.ticks and c.mov.ticks > 0 then
-    c.pos.x = c.pos.x + (c.mov.x - c.pos.c) / c.mov.ticks
-    c.pos.y = c.pos.y + (c.mov.y - c.pos.c) / c.mov.ticks
-    c.mov.tick = c.mov.ticks - 1
-    if c.mov.ticks == 0 then
-      dbg.print(string.format("MOVE COMPLETE: %f,%f", c.mov.x, c.mov.y))
-      c.mov.ticks = nil
+function moveChar(c, phase)
+  isCharMoved = moveCharAdvanceTick(c)
+  if isCharMoved then
+    c.mov.phase = {
+      x = c.mov.prv.x + phase * (c.mov.nxt.x - c.mov.prv.x),
+      y = c.mov.prv.y + phase * (c.mov.nxt.y - c.mov.prv.y),
+    }
+  else
+    c.mov.phase = c.mov.dst
+  end
+  return isCharMoved
+end
+
+function moveCharAdvanceTick(c)
+  local m = c.mov
+  pl.pretty.dump(m)
+  if m.dst.ticks and m.dst.ticks > 0 then
+    m.prv = m.nxt
+    m.nxt.x = m.prv.x + (m.dst.x - m.prv.x) / m.dst.ticks
+    m.nxt.y = m.prv.y + (m.dst.y - m.prv.y) / m.dst.ticks
+    m.dst.ticks = m.dst.ticks - 1
+    if m.dst.ticks == 0 then
+      dbg.print(string.format("MOVE COMPLETE: %f,%f", m.dst.x, m.dst.y))
       return false
     end
     return true
+  else
+    return false
   end
 end
 
-function computeMove(c, moveCmd)
+function computeMovDst(c, moveCmd, ticks)
   -- XXX: Scale movement here if needed.
-  local x = c.pos.x + moveCmd.x
-  local y = c.pos.y + moveCmd.y
+  local x = c.mov.dst.x + moveCmd.x
+  local y = c.mov.dst.y + moveCmd.y
   pl.pretty.dump({x,y})
-  pl.pretty.dump(glo.map.tiles[y+1])
-  if not glo.map.tiles[y+1][x+1].pass then
+  --pl.pretty.dump(glo.map.tiles[y+1])
+  local t = glo.map.tiles
+  if not (t[y+1] and t[y+1][x+1] and not t[y+1][x+1].pass) then
+    print("SKIP")
+    pl.pretty.dump(t[y+1][x+1])
     return false
   end
-  return {x=x,y=y}
+  return {x=x, y=y, ticks=ticks}
 end
 
 function love.update(dt)
   if paused then return end
   local time = love.timer.getTime() - glo.startTime
+  local phase = 1 - ((glo.nextTickTime - time) / SECS_PER_TICK)
   --dbg.print(string.format("%f", time))
   local p = glo.player
   -- logic loop
@@ -104,24 +123,27 @@ function love.update(dt)
     dbg.print(string.format("TICK: %f", glo.nextTickTime))
     glo.nextTickTime = glo.nextTickTime + SECS_PER_TICK
     -- Apply previous move
-    local playerMoving = moveChar(glo.player)
+    local playerMoving = moveChar(glo.player, phase)
     -- Handle next move
     if not playerMoving then
       moveCmd = scanMoveKeys()
       if moveCmd then
-        mov = computeMove(glo.player, moveCmd)
-        if mov then
-          p.mov = mov
+        pl.pretty.dump(moveCmd)
+        dst = computeMovDst(glo.player, moveCmd, MOVES_PER_TILE)
+        if dst then
+          print("dst")
+          pl.pretty.dump(dst)
+          pl.pretty.dump(glo.player)
+          p.mov.dst = dst
+          pl.pretty.dump(glo.player)
         end
       end
     end
   end
-  local phase = 1 - ((glo.nextTickTime - time) / SECS_PER_TICK)
-  p.draw = { x = p.pos.x + phase * p.mov.x, y = p.pos.y + phase * p.mov.y }
 end
 
 function scanMoveKeys()
-  local move = {x=0, y=0, nTicks=MOVES_PER_TILE}
+  local move = {x=0, y=0}
   local m = glo.moveKeys
   glo.moveKeys = {}
   if love.keyboard.isDown("left") or m["left"] then move.x = move.x - 1 end
@@ -146,7 +168,7 @@ function love.draw()
   local p = glo.player
   local tileW = assert(glo.map.tileSize.w)
   local tileH = assert(glo.map.tileSize.h)
-  local pos = { x = p.draw.x * tileW, y = p.draw.y * tileH }
+  local pos = { x = p.mov.phase.x * tileW, y = p.mov.phase.y * tileH }
   -- Background
   love.graphics.setColor(clr.GREEN)
   rect("fill", 0, 0, screenSizeX, screenSizeY)
