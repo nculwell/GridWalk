@@ -2,13 +2,15 @@
 
 local dbg = require("dbg")
 local clr = require("color")
+local pl = {}
+pl.pretty = require("pl.pretty")
 
 local MAP_SIZE = { w=20, h=20 }
 local mapH = 20
 local TICKS_PER_SECOND = 10
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
 local MOVES_PER_TILE = 5
-local START_POS = {x=0,y=0}
+local START_POS = {x=1,y=1}
 local VSYNC = false
 local FULLSCREENTYPE = "desktop"
 -- local FULLSCREENTYPE = "exclusive"
@@ -18,7 +20,7 @@ local glo = {
   paused=false,
   quitting=false,
   player = {
-    pos = START_POS, mov = {x=0,y=0}, draw = {x=0,y=0}
+    pos = START_POS, mov = START_POS
   },
   moveKeys = {}
 }
@@ -64,6 +66,34 @@ function toggleFullscreen()
   love.window.setMode(screenW, screenH, newFlags)
 end
 
+function moveChar(c)
+  if c.mov.x == c.pos.x and c.mov.y == c.pos.y then
+    return false
+  elseif c.mov.ticks and c.mov.ticks > 0 then
+    c.pos.x = c.pos.x + (c.mov.x - c.pos.c) / c.mov.ticks
+    c.pos.y = c.pos.y + (c.mov.y - c.pos.c) / c.mov.ticks
+    c.mov.tick = c.mov.ticks - 1
+    if c.mov.ticks == 0 then
+      dbg.print(string.format("MOVE COMPLETE: %f,%f", c.mov.x, c.mov.y))
+      c.mov.ticks = nil
+      return false
+    end
+    return true
+  end
+end
+
+function computeMove(c, moveCmd)
+  -- XXX: Scale movement here if needed.
+  local x = c.pos.x + moveCmd.x
+  local y = c.pos.y + moveCmd.y
+  pl.pretty.dump({x,y})
+  pl.pretty.dump(glo.map.tiles[y+1])
+  if not glo.map.tiles[y+1][x+1].pass then
+    return false
+  end
+  return {x=x,y=y}
+end
+
 function love.update(dt)
   if paused then return end
   local time = love.timer.getTime() - glo.startTime
@@ -74,27 +104,33 @@ function love.update(dt)
     dbg.print(string.format("TICK: %f", glo.nextTickTime))
     glo.nextTickTime = glo.nextTickTime + SECS_PER_TICK
     -- Apply previous move
-    p.pos.x = p.pos.x + p.mov.x
-    p.pos.y = p.pos.y + p.mov.y
+    local playerMoving = moveChar(glo.player)
     -- Handle next move
-    p.mov = scanMoveKeys()
-    dbg.print(string.format("MOVE: %f,%f", p.mov.x, p.mov.y))
-    -- TODO: Cancel move if invalid.
+    if not playerMoving then
+      moveCmd = scanMoveKeys()
+      if moveCmd then
+        mov = computeMove(glo.player, moveCmd)
+        if mov then
+          p.mov = mov
+        end
+      end
+    end
   end
   local phase = 1 - ((glo.nextTickTime - time) / SECS_PER_TICK)
   p.draw = { x = p.pos.x + phase * p.mov.x, y = p.pos.y + phase * p.mov.y }
 end
 
 function scanMoveKeys()
-  local move = {x=0, y=0}
+  local move = {x=0, y=0, nTicks=MOVES_PER_TILE}
   local m = glo.moveKeys
   glo.moveKeys = {}
   if love.keyboard.isDown("left") or m["left"] then move.x = move.x - 1 end
   if love.keyboard.isDown("right") or m["right"] then move.x = move.x + 1 end
   if love.keyboard.isDown("up") or m["up"] then move.y = move.y - 1 end
   if love.keyboard.isDown("down") or m["down"] then move.y = move.y + 1 end
-  move.x = move.x / MOVES_PER_TILE
-  move.y = move.y / MOVES_PER_TILE
+  --move.x = move.x / MOVES_PER_TILE
+  --move.y = move.y / MOVES_PER_TILE
+  if move.x == 0 and move.y == 0 then return nil end
   return move
 end
 
@@ -129,10 +165,10 @@ end
 
 function loadMap()
   local terrain = {
-    { c=clr.BLUE },
-    { c=clr.LBLUE },
-    { c=clr.GREEN },
-    { c=clr.YELLOW },
+    { c=clr.BLUE, pass=false },
+    { c=clr.LBLUE, pass=true },
+    { c=clr.GREEN, pass=true },
+    { c=clr.YELLOW, pass=true },
   }
   seed = os.time()
   print("Map seed: "..seed)
