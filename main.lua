@@ -6,6 +6,7 @@ local pl = {}
 pl.pretty = require("pl.pretty")
 
 local MAP_SIZE = { w=20, h=20 }
+local MAP_DISPLAY_EXTRA_CELLS = 2
 local mapH = 20
 local TICKS_PER_SECOND = 10
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
@@ -185,8 +186,12 @@ function rect(mode, x, y, w, h)
   love.graphics.polygon(mode, x, y, x+w, y, x+w, y+h, x, y+h)
 end
 
+-----------------------------------------------------------
+-- MAP
+
 function loadMap()
-  local terrain = {
+  local map = {}
+  map.tiles = {
     { c=clr.BLUE, pass=false },
     { c=clr.LBLUE, pass=true },
     { c=clr.GREEN, pass=true },
@@ -195,17 +200,109 @@ function loadMap()
   seed = os.time()
   print("Map seed: "..seed)
   math.randomseed(seed)
-  local map = {}
+  map.size = MAP_SIZE
   map.tileSize = { w=40, h=40 }
-  map.tiles = {}
-  local mapW = nextPowerOf2(MAP_SIZE.w * map.tileSize.w)
-  local mapH = nextPowerOf2(MAP_SIZE.h * map.tileSize.h)
-  local mapSide = math.max(mapW, mapH)
-  print("Map side: "..mapSide)
-  local cvs = love.graphics.newCanvas(mapSide, mapSide)
-  cvs:renderTo(function() generateTiles(map, terrain) end)
-  map.image = love.graphics.newImage(cvs:newImageData())
+  addMapMethods(map)
+  buildTileGrid(map)
+  buildDisplayGrid(map)
+  buildRandomMap(map)
   return map
+end
+
+function addMapMethods(map)
+  function map:cellAt(r, c)
+    return map.cells[r] and map.cells[r][c] and map.cells[r, c]
+  end
+  function map:update(viewport)
+    updateDisplayGrid(map, viewport)
+  end
+end
+
+function buildTileGrid(map)
+  local tileCount = table.getn(map.tiles)
+  local tileGridW = math.ceil(math.sqrt(tileCount))
+  local tileGridH = math.ceil(tileCount / tileGridW)
+  local canvasSize = nextPowerOf2(
+    math.max(tileGridW * map.tileSize.w, tileGridH * map.tileSize.h))
+  print("Tile grid size: "..canvasSize)
+  local cvs = love.graphics.newCanvas(canvasSize, canvasSize)
+  cvs:renderTo(function()
+    local tileIndex = 0
+    for r = 1, tileGridH do
+      for c = 1, tileGridW do
+        tileIndex = tileIndex + 1
+        tile = map.tiles[tileIndex]
+        local x = (c-1) * map.tileSize.w
+        local y = (r-1) * map.tileSize.h
+        tile.quad = love.graphics.newQuad(x, y, map.tileSize.w, map.tileSize.h, canvasSize, canvasSize)
+        love.graphics.setColor(tile.c)
+        love.graphics.rectangle("fill", x, y, x + map.tileSize.w, y + map.tileSize.h)
+      end
+    end
+  end)
+  map.tilesetImage = love.graphics.newImage(cvs:newImageData())
+end
+
+function buildDisplayGrid(map)
+  map.displayGrid = {}
+  local screenW, screenH = love.window.getDimensions()
+  local minWCells = math.ceil(screenW / map.tileSize.w)
+  local minHCells = math.ceil(screenH / map.tileSize.h)
+  local wCells = minWCells + 2 * MAP_DISPLAY_EXTRA_CELLS
+  local hCells = minHCells + 2 * MAP_DISPLAY_EXTRA_CELLS
+  map.displayGrid.sizeCells = { w=wCells, h=hCells }
+  --local wPx = map.tileSize.w * wCells
+  --local hPx = map.tileSize.h * hCells
+  --map.displayGrid.canvas = love.graphics.newCanvas(wPx, hPx)
+  map.displayGrid.spriteBatch = love.graphics.newSpriteBatch(map.tilesetImage, wCells * hCells)
+  map.displayGrid.view = { r=1-MAP_DISPLAY_EXTRA_CELLS, c=1-MAP_DISPLAY_EXTRA_CELLS }
+end
+
+function buildRandomMap(map)
+  map.cells = {}
+  for r = 1, map.size.h do
+    map.cells[r] = {}
+    for c = 1, map.size.w do
+      local cell = {}
+      if r == 1 or r == map.size.h or c == 1 or c == map.size.w then
+        cell.t = cells[1]
+      else
+        local i = math.random(2, table.getn(tiles))
+        cell.t = tiles[i]
+      end
+      map.cells[r][c] = cell
+    end
+  end
+end
+
+function updateDisplayGrid(map, viewport)
+  local sb = map.displayGrid.spriteBatch
+  -- Check if we need to update yet.
+  local vpCells = {
+    r = math.floor(viewport.y / map.tileSize.h),
+    c = math.floor(viewport.x / map.tileSize.w) }
+  if map.displayGrid.view.r == vpCells.r and map.displayGrid.view.c == vpCells.c then
+    return -- display hasn't moved, no need to update
+  else
+    map.displayGrid.view = vpCells
+  end
+  --vpCells.h = math.ceil((viewport.h + (viewport.y - (vpCells.r-1) * map.tileSize.h)) / map.tileSize.h)
+  --vpCells.w = math.ceil((viewport.w + (viewport.x - (vpCells.c-1) * map.tileSize.w)) / map.tileSize.w)
+  -- Do the update.
+  local displayH = math.ceil(viewport.h / map.tileSize.h + 1)
+  local displayW = math.ceil(viewport.w / map.tileSize.w + 1)
+  sb:clear()
+  for r = vpCells.r, vpCells.r + displayH - 1 do
+    local y = r * tileSize.h - viewport.y
+    for c = vpCells.c, vpCells.c + displayW - 1 do
+      local x = c * tileSize.w - viewport.x
+      local cell = map:cellAt(r, c)
+      if cell then
+        sb:add(cell.t.quad, x, y)
+      end
+    end
+  end
+  sb:flush()
 end
 
 function nextPowerOf2(n)
@@ -214,26 +311,5 @@ function nextPowerOf2(n)
     p = p * 2
   end
   return p
-end
-
-function generateTiles(map, terrain)
-  love.graphics.clear()
-  for r = 1, MAP_SIZE.h do
-    map.tiles[r] = {}
-    for c = 1, MAP_SIZE.w do
-      local cell = {}
-      if r == 1 or r == MAP_SIZE.h or c == 1 or c == MAP_SIZE.w then
-        cell.t = terrain[1]
-      else
-        local i = math.random(2, table.getn(terrain))
-        cell.t = terrain[i]
-      end
-      map.tiles[r][c] = cell
-      local x = (c-1) * map.tileSize.w
-      local y = (r-1) * map.tileSize.h
-      love.graphics.setColor(cell.t.c)
-      love.graphics.rectangle("fill", x, y, x + map.tileSize.w, y + map.tileSize.h)
-    end
-  end
 end
 
