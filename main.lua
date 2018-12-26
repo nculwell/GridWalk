@@ -81,7 +81,7 @@ end
 
 function moveCharAdvanceTick(c)
   local m = c.mov
-  pl.pretty.dump(m)
+  --pl.pretty.dump(m)
   if m.dst.ticks and m.dst.ticks > 0 then
     m.prv = m.nxt
     m.nxt.x = m.prv.x + (m.dst.x - m.prv.x) / m.dst.ticks
@@ -101,12 +101,12 @@ function computeMovDst(c, moveCmd, ticks)
   -- XXX: Scale movement here if needed.
   local x = c.mov.dst.x + moveCmd.x
   local y = c.mov.dst.y + moveCmd.y
-  pl.pretty.dump({x,y})
+  --pl.pretty.dump({x,y})
   --pl.pretty.dump(glo.map.tiles[y+1])
   local t = glo.map.tiles
   if not (t[y+1] and t[y+1][x+1] and not t[y+1][x+1].pass) then
     print("SKIP")
-    pl.pretty.dump(t[y+1][x+1])
+    --pl.pretty.dump(t[y+1][x+1])
     return false
   end
   return {x=x, y=y, ticks=ticks}
@@ -128,14 +128,14 @@ function love.update(dt)
     if not playerMoving then
       moveCmd = scanMoveKeys()
       if moveCmd then
-        pl.pretty.dump(moveCmd)
+        --pl.pretty.dump(moveCmd)
         dst = computeMovDst(glo.player, moveCmd, MOVES_PER_TILE)
         if dst then
-          print("dst")
-          pl.pretty.dump(dst)
-          pl.pretty.dump(glo.player)
+          --print("dst")
+          --pl.pretty.dump(dst)
+          --pl.pretty.dump(glo.player)
           p.mov.dst = dst
-          pl.pretty.dump(glo.player)
+          --pl.pretty.dump(glo.player)
         end
       end
     end
@@ -178,7 +178,7 @@ function love.draw()
   love.graphics.setColor(clr.LGREEN)
   --dbg.printf("DRAW: %f,%f", pos.x, pos.y)
   local playerSize = (MOVES_PER_TILE-2)/MOVES_PER_TILE
-  rect("fill", centerX, centerY, math.floor(playerSize*tileW), math.floor(playerSize*tileW))
+  rect("fill", centerX, centerY, math.floor(playerSize*tileW), math.floor(playerSize*tileH))
 end
 
 function rect(mode, x, y, w, h)
@@ -198,13 +198,26 @@ function loadMap()
   local map = {}
   map.tileSize = { w=40, h=40 }
   map.tiles = {}
-  local cvs = love.graphics.newCanvas(MAP_SIZE.w * map.tileSize.w, MAP_SIZE.h * map.tileSize.h)
+  local mapW = nextPowerOf2(MAP_SIZE.w * map.tileSize.w)
+  local mapH = nextPowerOf2(MAP_SIZE.h * map.tileSize.h)
+  local mapSide = math.max(mapW, mapH)
+  print("Map side: "..mapSide)
+  local cvs = love.graphics.newCanvas(mapSide, mapSide)
   cvs:renderTo(function() generateTiles(map, terrain) end)
   map.image = love.graphics.newImage(cvs:newImageData())
   return map
 end
 
+function nextPowerOf2(n)
+  local p = 2
+  while p < n do
+    p = p * 2
+  end
+  return p
+end
+
 function generateTiles(map, terrain)
+  love.graphics.clear()
   for r = 1, MAP_SIZE.h do
     map.tiles[r] = {}
     for c = 1, MAP_SIZE.w do
