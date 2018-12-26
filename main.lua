@@ -178,7 +178,7 @@ function love.draw()
   love.graphics.setColor(clr.GREEN)
   rect("fill", 0, 0, screenSizeX, screenSizeY)
   love.graphics.setColor(clr.WHITE)
-  love.graphics.draw(glo.map.image, centerX-pos.x, centerY-pos.y)
+  --love.graphics.draw(glo.map.image, centerX-pos.x, centerY-pos.y)
   glo.map:draw(viewport)
   -- Player
   love.graphics.setColor(clr.LGREEN)
@@ -221,8 +221,8 @@ function addMapMethods(map)
   function map:update(viewport)
     updateDisplayGrid(map, viewport)
   end
-  function map:draw()
-    drawMap(map)
+  function map:draw(viewport)
+    drawMap(map, viewport)
   end
 end
 
@@ -279,10 +279,10 @@ function buildRandomMap(map)
     for c = 1, map.size.w do
       local cell = {}
       if r == 1 or r == map.size.h or c == 1 or c == map.size.w then
-        cell.t = cells[1]
+        cell.t = map.tiles[1]
       else
-        local i = math.random(2, table.getn(tiles))
-        cell.t = tiles[i]
+        local i = math.random(2, table.getn(map.tiles))
+        cell.t = map.tiles[i]
       end
       map.cells[r][c] = cell
     end
@@ -300,8 +300,8 @@ function updateDisplayGrid(map, viewport)
   else
     map.displayGrid.view = dgView
   end
-  dgView.y = dgView.r * tileSize.h - viewport.y
-  dgView.x = dgView.c * tileSize.w - viewport.x
+  dgView.y = dgView.r * map.tileSize.h - viewport.y
+  dgView.x = dgView.c * map.tileSize.w - viewport.x
   --dgView.h = math.ceil((viewport.h + (viewport.y - (dgView.r-1) * map.tileSize.h)) / map.tileSize.h)
   --dgView.w = math.ceil((viewport.w + (viewport.x - (dgView.c-1) * map.tileSize.w)) / map.tileSize.w)
   -- Do the update.
@@ -316,9 +316,9 @@ function updateDisplayGrid(map, viewport)
       if cell then
         sb:add(cell.t.quad, x, y)
       end
-      x = x + tileSize.w
+      x = x + map.tileSize.w
     end
-    y = y + tileSize.h
+    y = y + map.tileSize.h
   end
   sb:flush()
 end
