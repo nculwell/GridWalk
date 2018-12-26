@@ -170,11 +170,16 @@ function love.draw()
   local tileW = assert(glo.map.tileSize.w)
   local tileH = assert(glo.map.tileSize.h)
   local pos = { x = p.mov.phase.x * tileW, y = p.mov.phase.y * tileH }
+  local viewport = {
+    x = centerX - pos.x, y = centerY - pos.y,
+    w = screenSizeX, h = screenSizeY }
+  --glo.map:update(viewport)
   -- Background
   love.graphics.setColor(clr.GREEN)
   rect("fill", 0, 0, screenSizeX, screenSizeY)
   love.graphics.setColor(clr.WHITE)
   love.graphics.draw(glo.map.image, centerX-pos.x, centerY-pos.y)
+  glo.map:draw(viewport)
   -- Player
   love.graphics.setColor(clr.LGREEN)
   --dbg.printf("DRAW: %f,%f", pos.x, pos.y)
@@ -211,11 +216,20 @@ end
 
 function addMapMethods(map)
   function map:cellAt(r, c)
-    return map.cells[r] and map.cells[r][c] and map.cells[r, c]
+    return map.cells[r] and map.cells[r][c] and map.cells[r][c]
   end
   function map:update(viewport)
     updateDisplayGrid(map, viewport)
   end
+  function map:draw()
+    drawMap(map)
+  end
+end
+
+function drawMap(map, viewport)
+  map:update(viewport)
+  local dgView = map.displayGrid.view
+  love.graphics.draw(map.displayGrid.spriteBatch, dgView.x, dgView.y)
 end
 
 function buildTileGrid(map)
@@ -245,7 +259,7 @@ end
 
 function buildDisplayGrid(map)
   map.displayGrid = {}
-  local screenW, screenH = love.window.getDimensions()
+  local screenW, screenH = love.graphics.getDimensions()
   local minWCells = math.ceil(screenW / map.tileSize.w)
   local minHCells = math.ceil(screenH / map.tileSize.h)
   local wCells = minWCells + 2 * MAP_DISPLAY_EXTRA_CELLS
@@ -278,29 +292,33 @@ end
 function updateDisplayGrid(map, viewport)
   local sb = map.displayGrid.spriteBatch
   -- Check if we need to update yet.
-  local vpCells = {
+  local dgView = {
     r = math.floor(viewport.y / map.tileSize.h),
     c = math.floor(viewport.x / map.tileSize.w) }
-  if map.displayGrid.view.r == vpCells.r and map.displayGrid.view.c == vpCells.c then
+  if map.displayGrid.view.r == dgView.r and map.displayGrid.view.c == dgView.c then
     return -- display hasn't moved, no need to update
   else
-    map.displayGrid.view = vpCells
+    map.displayGrid.view = dgView
   end
-  --vpCells.h = math.ceil((viewport.h + (viewport.y - (vpCells.r-1) * map.tileSize.h)) / map.tileSize.h)
-  --vpCells.w = math.ceil((viewport.w + (viewport.x - (vpCells.c-1) * map.tileSize.w)) / map.tileSize.w)
+  dgView.y = dgView.r * tileSize.h - viewport.y
+  dgView.x = dgView.c * tileSize.w - viewport.x
+  --dgView.h = math.ceil((viewport.h + (viewport.y - (dgView.r-1) * map.tileSize.h)) / map.tileSize.h)
+  --dgView.w = math.ceil((viewport.w + (viewport.x - (dgView.c-1) * map.tileSize.w)) / map.tileSize.w)
   -- Do the update.
   local displayH = math.ceil(viewport.h / map.tileSize.h + 1)
   local displayW = math.ceil(viewport.w / map.tileSize.w + 1)
   sb:clear()
-  for r = vpCells.r, vpCells.r + displayH - 1 do
-    local y = r * tileSize.h - viewport.y
-    for c = vpCells.c, vpCells.c + displayW - 1 do
-      local x = c * tileSize.w - viewport.x
+  local y = dgView.y
+  for r = dgView.r, dgView.r + displayH - 1 do
+    local x = dgView.x
+    for c = dgView.c, dgView.c + displayW - 1 do
       local cell = map:cellAt(r, c)
       if cell then
         sb:add(cell.t.quad, x, y)
       end
+      x = x + tileSize.w
     end
+    y = y + tileSize.h
   end
   sb:flush()
 end
