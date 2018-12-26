@@ -52,7 +52,7 @@ function getCellAtRowCol(map, row, col)
   assert(col)
   assert(map.cells)
   local cell = map.cells[row] and map.cells[row][col]
-  printf("CellAt (%d,%d): %d", row, col, (cell and cell.t.id) or 0)
+  --printf("CellAt (%d,%d): %d", row, col, (cell and cell.t.id) or 0)
   return cell
 end
 
@@ -60,21 +60,10 @@ function getCellAtXY(map, x, y)
   assert(map)
   assert(x)
   assert(y)
-  local r = math.floor(x / map.tileSize.pxW)
-  local c = math.floor(y / map.tileSize.pxH)
-  if r < 1 or c < 1 then return nil end
-  return getCellAtRowCol(map, r, c)
-end
-
-function drawMap(map, viewport)
-  assert(map)
-  assert(viewport)
-  updateDisplayGrid(map, viewport)
-  --pldump(map.display)
-  local dv = map.display.view
-  love.graphics.draw(map.display.spriteBatch,
-    0, 0, 0, 1, 1, -- defaults
-    -dv.x, -dv.y)
+  local row = math.floor(x / map.tileSize.pxW)
+  local col = math.floor(y / map.tileSize.pxH)
+  if row < 1 or col < 1 then return nil end
+  return getCellAtRowCol(map, row, col)
 end
 
 function buildTileGrid(map)
@@ -174,17 +163,25 @@ function updateDisplaySpriteBatch(map, viewport)
         sb:add(cell.t.quad, x, y)
         printf("Cell: %d at (%f, %f) (r=%d,c=%d)", cell.t.id, x, y, r, c)
       else
-        printf("Cell: NIL at (%f,%f) (r=%d,c=%d)", x, y, r, c)
+        --printf("Cell: NIL at (%f,%f) (r=%d,c=%d)", x, y, r, c)
       end
       x = x + map.tileSize.pxW
     end
     y = y + map.tileSize.pxH
   end
   sb:flush()
-  printf("Cells: %d x %d", #(map.cells), #(map.cells[1]))
-  --pldump(map.cells)
-  pldump(map.cells[1][1])
-  pldump(map.cells[8][8])
+  --printf("Cells: %d x %d", #(map.cells), #(map.cells[1]))
+end
+
+function drawMap(map, viewport)
+  assert(map)
+  assert(viewport)
+  updateDisplayGrid(map, viewport)
+  --pldump(map.display)
+  local dv = map.display.view
+  love.graphics.draw(map.display.spriteBatch,
+    0, 0, 0, 1, 1, -- defaults
+    -dv.x, -dv.y)
 end
 
 function nextPowerOf2(n)
