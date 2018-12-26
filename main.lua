@@ -2,11 +2,11 @@
 
 local dbg = require("dbg")
 local clr = require("color")
+local map = require("map")
 local pl = {}
 pl.pretty = require("pl.pretty")
+pldump = pl.pretty.dump
 
-local MAP_SIZE = { w=20, h=20 }
-local MAP_DISPLAY_EXTRA_CELLS = 2
 local mapH = 20
 local TICKS_PER_SECOND = 10
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
@@ -41,7 +41,7 @@ function love.load()
   glo.startTime = love.timer.getTime()
   glo.nextTickTime = 0
   dbg.init("gridwalk.log")
-  glo.map = loadMap()
+  glo.map = map.loadMap()
 end
 
 function love.keypressed(key)
@@ -90,6 +90,7 @@ function moveCharAdvanceTick(c)
     m.dst.ticks = m.dst.ticks - 1
     if m.dst.ticks == 0 then
       dbg.print(string.format("MOVE COMPLETE: %f,%f", m.dst.x, m.dst.y))
+      print("MOVE COMPLETE: "..m.dst.x..","..m.dst.y)
       return false
     end
     return true
@@ -104,11 +105,11 @@ function computeMovDst(c, moveCmd, ticks)
   local y = c.mov.dst.y + moveCmd.y
   --pl.pretty.dump({x,y})
   --pl.pretty.dump(glo.map.tiles[y+1])
-  local t = glo.map.tiles
-  if not (t[y+1] and t[y+1][x+1] and not t[y+1][x+1].pass) then
+  local destCell = glo.map:cellAtXY(x, y)
+  if not (destCell and not destCell.t.pass) then
     print("SKIP")
-    --pl.pretty.dump(t[y+1][x+1])
-    return false
+    pldump(destCell)
+    --return false
   end
   return {x=x, y=y, ticks=ticks}
 end
@@ -132,8 +133,9 @@ function love.update(dt)
         --pl.pretty.dump(moveCmd)
         dst = computeMovDst(glo.player, moveCmd, MOVES_PER_TILE)
         if dst then
+          print("MOVING:")
           --print("dst")
-          --pl.pretty.dump(dst)
+          pldump(dst)
           --pl.pretty.dump(glo.player)
           p.mov.dst = dst
           --pl.pretty.dump(glo.player)
@@ -167,19 +169,21 @@ function love.draw()
   local centerX = math.floor(screenSizeX/2)
   local centerY = math.floor(screenSizeY/2)
   local p = glo.player
-  local tileW = assert(glo.map.tileSize.w)
-  local tileH = assert(glo.map.tileSize.h)
+  local tileW, tileH = glo.map:getTileSize()
   local pos = { x = p.mov.phase.x * tileW, y = p.mov.phase.y * tileH }
-  local viewport = {
-    x = centerX - pos.x, y = centerY - pos.y,
-    w = screenSizeX, h = screenSizeY }
-  --glo.map:update(viewport)
+  local mapViewport = {
+    screenX = 0, screenY = 0, pxW = screenSizeX, pxH = screenSizeY,
+    mapX = pos.x - centerX + math.floor(tileW/2),
+    mapY = pos.y - centerY + math.floor(tileH/2),
+  }
+  --glo.map:update(mapViewport)
   -- Background
-  love.graphics.setColor(clr.GREEN)
-  rect("fill", 0, 0, screenSizeX, screenSizeY)
+  love.graphics.clear()
+  --love.graphics.setColor(clr.GREEN)
+  --rect("fill", 0, 0, screenSizeX, screenSizeY)
   love.graphics.setColor(clr.WHITE)
   --love.graphics.draw(glo.map.image, centerX-pos.x, centerY-pos.y)
-  glo.map:draw(viewport)
+  glo.map:draw(mapViewport, { x=0, y=0 })
   -- Player
   love.graphics.setColor(clr.LGREEN)
   --dbg.printf("DRAW: %f,%f", pos.x, pos.y)
@@ -189,145 +193,5 @@ end
 
 function rect(mode, x, y, w, h)
   love.graphics.polygon(mode, x, y, x+w, y, x+w, y+h, x, y+h)
-end
-
------------------------------------------------------------
--- MAP
-
-function loadMap()
-  local map = {}
-  map.tiles = {
-    { c=clr.BLUE, pass=false },
-    { c=clr.LBLUE, pass=true },
-    { c=clr.GREEN, pass=true },
-    { c=clr.YELLOW, pass=true },
-  }
-  seed = os.time()
-  print("Map seed: "..seed)
-  math.randomseed(seed)
-  map.size = MAP_SIZE
-  map.tileSize = { w=40, h=40 }
-  addMapMethods(map)
-  buildTileGrid(map)
-  buildDisplayGrid(map)
-  buildRandomMap(map)
-  return map
-end
-
-function addMapMethods(map)
-  function map:cellAt(r, c)
-    return map.cells[r] and map.cells[r][c] and map.cells[r][c]
-  end
-  function map:update(viewport)
-    updateDisplayGrid(map, viewport)
-  end
-  function map:draw(viewport)
-    drawMap(map, viewport)
-  end
-end
-
-function drawMap(map, viewport)
-  map:update(viewport)
-  local dgView = map.displayGrid.view
-  love.graphics.draw(map.displayGrid.spriteBatch, dgView.x, dgView.y)
-end
-
-function buildTileGrid(map)
-  local tileCount = table.getn(map.tiles)
-  local tileGridW = math.ceil(math.sqrt(tileCount))
-  local tileGridH = math.ceil(tileCount / tileGridW)
-  local canvasSize = nextPowerOf2(
-    math.max(tileGridW * map.tileSize.w, tileGridH * map.tileSize.h))
-  print("Tile grid size: "..canvasSize)
-  local cvs = love.graphics.newCanvas(canvasSize, canvasSize)
-  cvs:renderTo(function()
-    local tileIndex = 0
-    for r = 1, tileGridH do
-      for c = 1, tileGridW do
-        tileIndex = tileIndex + 1
-        tile = map.tiles[tileIndex]
-        local x = (c-1) * map.tileSize.w
-        local y = (r-1) * map.tileSize.h
-        tile.quad = love.graphics.newQuad(x, y, map.tileSize.w, map.tileSize.h, canvasSize, canvasSize)
-        love.graphics.setColor(tile.c)
-        love.graphics.rectangle("fill", x, y, x + map.tileSize.w, y + map.tileSize.h)
-      end
-    end
-  end)
-  map.tilesetImage = love.graphics.newImage(cvs:newImageData())
-end
-
-function buildDisplayGrid(map)
-  map.displayGrid = {}
-  local screenW, screenH = love.graphics.getDimensions()
-  local minWCells = math.ceil(screenW / map.tileSize.w)
-  local minHCells = math.ceil(screenH / map.tileSize.h)
-  local wCells = minWCells + 2 * MAP_DISPLAY_EXTRA_CELLS
-  local hCells = minHCells + 2 * MAP_DISPLAY_EXTRA_CELLS
-  map.displayGrid.sizeCells = { w=wCells, h=hCells }
-  --local wPx = map.tileSize.w * wCells
-  --local hPx = map.tileSize.h * hCells
-  --map.displayGrid.canvas = love.graphics.newCanvas(wPx, hPx)
-  map.displayGrid.spriteBatch = love.graphics.newSpriteBatch(map.tilesetImage, wCells * hCells)
-  map.displayGrid.view = { r=1-MAP_DISPLAY_EXTRA_CELLS, c=1-MAP_DISPLAY_EXTRA_CELLS }
-end
-
-function buildRandomMap(map)
-  map.cells = {}
-  for r = 1, map.size.h do
-    map.cells[r] = {}
-    for c = 1, map.size.w do
-      local cell = {}
-      if r == 1 or r == map.size.h or c == 1 or c == map.size.w then
-        cell.t = map.tiles[1]
-      else
-        local i = math.random(2, table.getn(map.tiles))
-        cell.t = map.tiles[i]
-      end
-      map.cells[r][c] = cell
-    end
-  end
-end
-
-function updateDisplayGrid(map, viewport)
-  local sb = map.displayGrid.spriteBatch
-  -- Check if we need to update yet.
-  local dgView = {
-    r = math.floor(viewport.y / map.tileSize.h),
-    c = math.floor(viewport.x / map.tileSize.w) }
-  if map.displayGrid.view.r == dgView.r and map.displayGrid.view.c == dgView.c then
-    return -- display hasn't moved, no need to update
-  else
-    map.displayGrid.view = dgView
-  end
-  dgView.y = dgView.r * map.tileSize.h - viewport.y
-  dgView.x = dgView.c * map.tileSize.w - viewport.x
-  --dgView.h = math.ceil((viewport.h + (viewport.y - (dgView.r-1) * map.tileSize.h)) / map.tileSize.h)
-  --dgView.w = math.ceil((viewport.w + (viewport.x - (dgView.c-1) * map.tileSize.w)) / map.tileSize.w)
-  -- Do the update.
-  local displayH = math.ceil(viewport.h / map.tileSize.h + 1)
-  local displayW = math.ceil(viewport.w / map.tileSize.w + 1)
-  sb:clear()
-  local y = dgView.y
-  for r = dgView.r, dgView.r + displayH - 1 do
-    local x = dgView.x
-    for c = dgView.c, dgView.c + displayW - 1 do
-      local cell = map:cellAt(r, c)
-      if cell then
-        sb:add(cell.t.quad, x, y)
-      end
-      x = x + map.tileSize.w
-    end
-    y = y + map.tileSize.h
-  end
-  sb:flush()
-end
-
-function nextPowerOf2(n)
-  local p = 2
-  while p < n do
-    p = p * 2
-  end
-  return p
 end
 
