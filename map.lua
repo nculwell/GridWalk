@@ -3,6 +3,9 @@
 local module = {}
 
 local clr = require("color")
+local coords = require("coords")
+local PxPos, CxPos, PxSize, CxSize =
+  coords.PxPos, coords.CxPos, coords.PxSize, coords.CxSize
 
 local MAP_SIZE = { cxW=20, cxH=20 }
 local MAP_DISPLAY_EXTRA_CELLS = 2
