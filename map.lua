@@ -7,7 +7,7 @@ local coords = require("coords")
 local PxPos, CxPos, PxSize, CxSize =
   coords.PxPos, coords.CxPos, coords.PxSize, coords.CxSize
 
-local MAP_SIZE = { cxW=20, cxH=20 }
+local MAP_SIZE = CxSize(20, 20)
 local MAP_DISPLAY_EXTRA_CELLS = 2
 
 local TILES = {
@@ -29,8 +29,8 @@ function module.loadMap()
   print("Map seed: "..seed)
   math.randomseed(seed)
   map.size = MAP_SIZE
-  map.tileSize = { pxW=40, pxH=40 }
-  printf("TileSize: %d x %d", map.tileSize.pxW, map.tileSize.pxH)
+  map.tileSize = PxSize(40, 40)
+  printf("TileSize: %d x %d", map.tileSize.unpack())
   buildTileGrid(map)
   buildDisplayGrid(map)
   buildRandomMap(map)
@@ -40,14 +40,14 @@ end
 function addMethods(map)
   map.getTileSize = getTileSize
   map.cellAt = getCellAtRowCol
-  map.cellAtXY = getCellAtXY
+  map.cellAtXY = getCellAtMapPixel
   map.update = updateDisplayGrid
   map.draw = drawMap
   return map
 end
 
 function getTileSize(map)
-  return map.tileSize.pxW, map.tileSize.pxH
+  return map.tileSize
 end
 
 function getCellAtRowCol(map, row, col)
@@ -60,12 +60,12 @@ function getCellAtRowCol(map, row, col)
   return cell
 end
 
-function getCellAtXY(map, x, y)
+function getCellAtMapPixel(map, x, y)
   assert(map)
   assert(x)
   assert(y)
-  local row = math.floor(x / map.tileSize.pxW)
-  local col = math.floor(y / map.tileSize.pxH)
+  local row, col = PxPos(x, y).toCx(map.tileSize).unpack()
+  printf("CellAt: (%d,%d)", row, col)
   if row < 1 or col < 1 then return nil end
   return getCellAtRowCol(map, row, col)
 end
@@ -136,32 +136,35 @@ function updateDisplayGrid(map, viewport)
   if not updateDgViewAndDetectChange(map, viewport) then
     return
   end
+  print("UPDATE.")
   pldump({ vp = viewport, dv = map.display.view })
   updateDisplaySpriteBatch(map, viewport)
 end
 
 function updateDgViewAndDetectChange(map, viewport)
-  local r = math.floor(viewport.mapY / map.tileSize.pxH)
-  local c = math.floor(viewport.mapX / map.tileSize.pxW)
-  local y = r * map.tileSize.pxH - viewport.mapY
-  local x = c * map.tileSize.pxW - viewport.mapX
+  local rc = viewport.mapOffset.toCx(map.tileSize)
+  -- Converting back to pixels, we get the position rounded
+  -- down to a cell boundary.
+  local xy = rc.toPx(map.tileSize).sub(viewport.mapOffset)
+  --pldump(rc); pldump(xy)
   local oldView = map.display.view
-  map.display.view = { r=r, c=c, y=y, x=x }
+  map.display.view = { r=r, c=c, y=xy.y, x=xy.x }
   return not (r == oldView.r and c == oldView.c)
 end
 
 function updateDisplaySpriteBatch(map, viewport)
   print("updateDisplaySpriteBatch")
-  local displayCxH = 1 + math.ceil(viewport.pxH / map.tileSize.pxH)
-  local displayCxW = 1 + math.ceil(viewport.pxW / map.tileSize.pxW)
+  local displaySizeCx = viewport.screenSize
+    .toCxCeil(map.tileSize)
+    .add(CxPos(1,1))
   local sb = map.display.spriteBatch
   local dv = map.display.view
   sb:clear()
   local y = dv.y
-  pldump({ dv=dv, displayWH={w=displayCxW,h=displayCxH}})
-  for r = dv.r, dv.r + displayCxH do
+  pldump({ dv=dv, displaySizeCx=displaySizeCx })
+  for r = dv.r, dv.r + displaySizeCx.cxH do
     local x = dv.x
-    for c = dv.c, dv.c + displayCxW do
+    for c = dv.c, dv.c + displaySizeCx.cxW do
       local cell = map:cellAt(r, c)
       if cell then
         sb:add(cell.t.quad, x, y)
@@ -169,7 +172,7 @@ function updateDisplaySpriteBatch(map, viewport)
           printf("Cell: %d at (%f, %f) (r=%d,c=%d)", cell.t.id, x, y, r, c)
         end
       else
-        --printf("Cell: NIL at (%f,%f) (r=%d,c=%d)", x, y, r, c)
+        printf("Cell: NIL at (%f,%f) (r=%d,c=%d)", x, y, r, c)
       end
       x = x + map.tileSize.pxW
     end
@@ -182,10 +185,13 @@ end
 function drawMap(map, viewport)
   assert(map)
   assert(viewport)
+  assert(viewport.screenOffset.t == "PxPos")
+  assert(viewport.screenSize.t == "PxSize")
+  assert(viewport.mapOffset.t == "PxPos")
   updateDisplayGrid(map, viewport)
   local dv = map.display.view
   love.graphics.draw(map.display.spriteBatch,
-    viewport.screenX, viewport.screenY,
+    viewport.screenOffset.unpack(),
     0, 1, 1, -- r, sx, sy (default values)
     -dv.x, -dv.y)
 end
