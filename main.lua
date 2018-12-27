@@ -163,32 +163,52 @@ end
 -- DRAW
 
 function love.draw()
-  -- Calculations
-  local screenSizeX = love.graphics.getWidth()
-  local screenSizeY = love.graphics.getHeight()
-  local centerX = math.floor(screenSizeX/2)
-  local centerY = math.floor(screenSizeY/2)
   local p = glo.player
+  -- Calculations
+  local screenSizeW = love.graphics.getWidth()
+  local screenSizeH = love.graphics.getHeight()
+  local centerX = math.floor(screenSizeW/2)
+  local centerY = math.floor(screenSizeH/2)
   local tileW, tileH = glo.map:getTileSize()
-  local pos = { x = p.mov.phase.x * tileW, y = p.mov.phase.y * tileH }
+  local pos = {
+    x = p.mov.phase.x * tileW,
+    y = p.mov.phase.y * tileH }
+  local playerTileDisplayOffset = {
+    x = centerX - math.floor(tileW/2),
+    y = centerY - math.floor(tileH/2) }
   local mapViewport = {
-    screenX = 0, screenY = 0, pxW = screenSizeX, pxH = screenSizeY,
-    mapX = pos.x - centerX + math.floor(tileW/2),
-    mapY = pos.y - centerY + math.floor(tileH/2),
+    screenX = 0, screenY = 0,
+    pxW = screenSizeW, pxH = screenSizeH,
+    mapX = pos.x - playerTileDisplayOffset.x,
+    mapY = pos.y - playerTileDisplayOffset.y,
   }
   --glo.map:update(mapViewport)
   -- Background
   love.graphics.clear()
   --love.graphics.setColor(clr.GREEN)
-  --rect("fill", 0, 0, screenSizeX, screenSizeY)
+  --rect("fill", 0, 0, screenSizeW, screenSizeH)
   love.graphics.setColor(clr.WHITE)
   --love.graphics.draw(glo.map.image, centerX-pos.x, centerY-pos.y)
   glo.map:draw(mapViewport, { x=0, y=0 })
   -- Player
   love.graphics.setColor(clr.LGREEN)
   --dbg.printf("DRAW: %f,%f", pos.x, pos.y)
-  local playerSize = (MOVES_PER_TILE-2)/MOVES_PER_TILE
-  rect("fill", centerX, centerY, math.floor(playerSize*tileW), math.floor(playerSize*tileH))
+  local playerSizePct = 0.6
+  local playerSize = {
+    w = math.floor(playerSizePct * tileW),
+    h = math.floor(playerSizePct * tileH) }
+  local playerIntraTileOffset = {
+    x = math.floor((tileW - playerSize.w)/2),
+    y = math.floor((tileH - playerSize.h)/2) }
+  local playerRectDisplayOffset = {
+    x = playerTileDisplayOffset.x + playerIntraTileOffset.x,
+    y = playerTileDisplayOffset.y + playerIntraTileOffset.y }
+  rect("fill",
+    playerRectDisplayOffset.x, playerRectDisplayOffset.y,
+    playerSize.w, playerSize.h)
+  --print(string.format("Player: (%d,%d,%d,%d)",
+  --  playerRectDisplayOffset.x, playerRectDisplayOffset.y,
+  --  playerSize.w, playerSize.h))
 end
 
 function rect(mode, x, y, w, h)

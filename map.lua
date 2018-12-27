@@ -27,6 +27,7 @@ function module.loadMap()
   math.randomseed(seed)
   map.size = MAP_SIZE
   map.tileSize = { pxW=40, pxH=40 }
+  printf("TileSize: %d x %d", map.tileSize.pxW, map.tileSize.pxH)
   buildTileGrid(map)
   buildDisplayGrid(map)
   buildRandomMap(map)
@@ -137,27 +138,27 @@ function updateDisplayGrid(map, viewport)
 end
 
 function updateDgViewAndDetectChange(map, viewport)
-  local r = -1 + math.floor(viewport.mapY / map.tileSize.pxH)
-  local c = -1 + math.floor(viewport.mapX / map.tileSize.pxW)
+  local r = math.floor(viewport.mapY / map.tileSize.pxH)
+  local c = math.floor(viewport.mapX / map.tileSize.pxW)
   local y = r * map.tileSize.pxH - viewport.mapY
   local x = c * map.tileSize.pxW - viewport.mapX
-  local oldDgView = map.display.view
+  local oldView = map.display.view
   map.display.view = { r=r, c=c, y=y, x=x }
-  return not (r == oldDgView.r and c == oldDgView.c)
+  return not (r == oldView.r and c == oldView.c)
 end
 
 function updateDisplaySpriteBatch(map, viewport)
   print("updateDisplaySpriteBatch")
-  local displayH = math.ceil(viewport.pxH / map.tileSize.pxH + 1)
-  local displayW = math.ceil(viewport.pxW / map.tileSize.pxW + 1)
+  local displayCxH = 1 + math.ceil(viewport.pxH / map.tileSize.pxH)
+  local displayCxW = 1 + math.ceil(viewport.pxW / map.tileSize.pxW)
   local sb = map.display.spriteBatch
   local dv = map.display.view
   sb:clear()
   local y = dv.y
-  pldump({ dv=dv, displayWH={w=displayW,h=displayH}})
-  for r = dv.r, dv.r + displayH - 1 do
+  pldump({ dv=dv, displayWH={w=displayCxW,h=displayCxH}})
+  for r = dv.r, dv.r + displayCxH do
     local x = dv.x
-    for c = dv.c, dv.c + displayW - 1 do
+    for c = dv.c, dv.c + displayCxW do
       local cell = map:cellAt(r, c)
       if cell then
         sb:add(cell.t.quad, x, y)
@@ -177,10 +178,10 @@ function drawMap(map, viewport)
   assert(map)
   assert(viewport)
   updateDisplayGrid(map, viewport)
-  --pldump(map.display)
   local dv = map.display.view
   love.graphics.draw(map.display.spriteBatch,
-    0, 0, 0, 1, 1, -- defaults
+    viewport.screenX, viewport.screenY,
+    0, 1, 1, -- r, sx, sy (default values)
     -dv.x, -dv.y)
 end
 
