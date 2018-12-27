@@ -162,7 +162,9 @@ function updateDisplaySpriteBatch(map, viewport)
       local cell = map:cellAt(r, c)
       if cell then
         sb:add(cell.t.quad, x, y)
-        printf("Cell: %d at (%f, %f) (r=%d,c=%d)", cell.t.id, x, y, r, c)
+        if r==2 and c==2 then
+          printf("Cell: %d at (%f, %f) (r=%d,c=%d)", cell.t.id, x, y, r, c)
+        end
       else
         --printf("Cell: NIL at (%f,%f) (r=%d,c=%d)", x, y, r, c)
       end

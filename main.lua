@@ -8,7 +8,8 @@ pl.pretty = require("pl.pretty")
 pldump = pl.pretty.dump
 
 local mapH = 20
-local TICKS_PER_SECOND = 10
+--local TICKS_PER_SECOND = 10
+local TICKS_PER_SECOND = 30
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
 local MOVES_PER_TILE = 5
 local START_POS = {x=1,y=1}
@@ -209,6 +210,7 @@ function love.draw()
   --print(string.format("Player: (%d,%d,%d,%d)",
   --  playerRectDisplayOffset.x, playerRectDisplayOffset.y,
   --  playerSize.w, playerSize.h))
+  love.graphics.print("Current FPS: "..tostring(love.timer.getFPS( )), 10, 10)
 end
 
 function rect(mode, x, y, w, h)
