@@ -16,7 +16,7 @@ local mapH = 20
 local TICKS_PER_SECOND = 30
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
 local MOVES_PER_TILE = 5
-local START_POS = {r=1,c=1}
+local START_POS = CxPos(1, 1)
 local VSYNC = false
 local FULLSCREENTYPE = "desktop"
 -- local FULLSCREENTYPE = "exclusive"
@@ -26,7 +26,7 @@ local glo = {
   paused=false,
   quitting=false,
   player = {
-    mov = { prv=START_POS, nxt=START_POS, dst=START_POS }
+    mov = { prv=START_POS, nxt=START_POS, dst={pos=START_POS} }
   },
   moveKeys = {}
 }
@@ -72,51 +72,49 @@ function toggleFullscreen()
   love.window.setMode(screenW, screenH, newFlags)
 end
 
-function moveChar(c, phase)
-  isCharMoved = moveCharAdvanceTick(c)
-  if isCharMoved then
-    c.mov.phase = c.mov.nxt.sub(c.mov.prv).scale(phase).add(c.mov.prv)
-    {
-      x = c.mov.prv.x + phase * (c.mov.nxt.x - c.mov.prv.x),
-      y = c.mov.prv.y + phase * (c.mov.nxt.y - c.mov.prv.y),
-    }
-  else
-    c.mov.phase = c.mov.dst
-  end
-  return isCharMoved
+function setCharPhase(c, phase)
+  local delta = c.mov.nxt.sub(c.mov.prv)
+  pldump(delta)
+  local deltaAsSize = delta.toCxSize()
+  pldump(deltaAsSize)
+  local deltaScaled = deltaAsSize.scale(phase)
+  pldump(deltaScaled)
+  c.mov.phase = c.mov.prv.add(deltaScaled)
 end
 
-function moveCharAdvanceTick(c)
+function moveChar(c)
   local m = c.mov
   --pl.pretty.dump(m)
+  m.dst.isMoving = false
   if m.dst.ticks and m.dst.ticks > 0 then
     m.prv = m.nxt
-    m.nxt.x = m.prv.x + (m.dst.x - m.prv.x) / m.dst.ticks
-    m.nxt.y = m.prv.y + (m.dst.y - m.prv.y) / m.dst.ticks
+    --pldump({prv=m.prv,dst=m.dst.pos})
+    local delta =
+      m.dst.pos
+      .sub(m.prv)
+      .toCxSize()
+      .scale(1/m.dst.ticks)
+    --pldump(delta)
+    m.nxt = m.prv.add(delta)
     m.dst.ticks = m.dst.ticks - 1
     if m.dst.ticks == 0 then
-      dbg.print(string.format("MOVE COMPLETE: %f,%f", m.dst.x, m.dst.y))
-      print("MOVE COMPLETE: "..m.dst.x..","..m.dst.y)
-      return false
+      printf("MOVE COMPLETE: RC=%d,%d", m.dst.pos.unpack())
+    else
+      m.dst.isMoving = true
     end
-    return true
-  else
-    return false
   end
 end
 
 function computeMovDst(c, moveCmdCx, ticks)
-  local currentCx = CxPos(c.mov.dst.r, c.mov.dst.c)
-  local moveToCx = currentCx.add(moveCmd)
+  local currentCx = c.mov.dst.pos
+  local moveToCx = currentCx.add(moveCmdCx)
   --pl.pretty.dump({x,y})
   --pl.pretty.dump(glo.map.tiles[y+1])
   local destCell = glo.map:cellAt(moveToCx.unpack())
   if not (destCell and not destCell.t.pass) then
-    print("SKIP")
-    pldump(destCell)
-    --return false
+    printf("SKIP: RC=%d,%d", moveToCx.unpack())
   end
-  return { r=moveToCx.r, c=moveToCx.c, ticks=ticks }
+  return { pos=moveToCx, ticks=ticks }
 end
 
 function love.update(dt)
@@ -139,15 +137,13 @@ function love.update(dt)
         dst = computeMovDst(glo.player, moveCmdCx, MOVES_PER_TILE)
         if dst then
           print("MOVING:")
-          --print("dst")
-          pldump(dst)
-          --pl.pretty.dump(glo.player)
+          pldump({ dst=dst })
           p.mov.dst = dst
-          --pl.pretty.dump(glo.player)
         end
       end
     end
   end
+  setCharPhase(glo.player, phase)
 end
 
 function scanMoveKeys()
@@ -158,7 +154,7 @@ function scanMoveKeys()
   if love.keyboard.isDown("right") or m["right"] then c = c + 1 end
   if love.keyboard.isDown("up") or m["up"] then r = r - 1 end
   if love.keyboard.isDown("down") or m["down"] then r = r + 1 end
-  local moveCmd = PxSize(r, c)
+  local moveCmd = CxSize(r, c)
   moveCmd.isMoved = not (c == 0 and r == 0)
   return moveCmd
 end
@@ -172,7 +168,7 @@ function love.draw()
   local screenSize = PxSize(love.graphics.getDimensions())
   local center = screenSize.scale(.5)
   local tileSize = glo.map:getTileSize()
-  local playerMovePhase = CxPos(p.mov.phase.x, p.mov.phase.y)
+  local playerMovePhase = p.mov.phase
   local pos = playerMovePhase.toPx(tileSize)
   local playerTileDisplayOffset = center.sub(tileSize.scale(.5))
   local mapViewport = {
