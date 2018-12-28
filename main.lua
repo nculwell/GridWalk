@@ -216,3 +216,36 @@ function rect(mode, pos, size)
   love.graphics.polygon(mode, x, y, x+w, y, x+w, y+h, x, y+h)
 end
 
+function netReceiveEvent(event)
+  print("Got message: ", event.data, event.peer)
+  --event.peer:send( "ping" )
+end
+
+function netConnectEvent(event)
+  print(event.peer, "connected.")
+  --event.peer:send("ping")
+end
+
+function netDisconnectEvent(event)
+  print(event.peer, "disconnected.")
+end
+
+do
+  local enet = require "enet"
+  local host = enet.host_create()
+  local server = host:connect("localhost:6789")
+  function pumpNetEvents()
+    while true do
+      local event = host:service()
+      if event == nil then break end
+      if event.type == "receive" then
+        netReceiveEvent(event)
+      elseif event.type == "connect" then
+        netConnectEvent(event)
+      elseif event.type == "disconnect" then
+        netDisconnectEvent(event)
+      end
+    end
+  end
+end
+
