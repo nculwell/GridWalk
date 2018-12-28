@@ -141,11 +141,11 @@ function love.update(dt)
     if not playerMoving then
       moveCmd = scanMoveKeys()
       if moveCmd.isMoved then
-        pl.pretty.dump(moveCmd)
+        --pl.pretty.dump(moveCmd)
         dst = computeMovDst(glo.player, moveCmd.dst, MOVES_PER_TILE)
         if dst then
-          print("MOVING:")
-          pldump({ dst=dst })
+          printf("MOVING: (%d, %d), ticks=%d", dst.pos.r, dst.pos.c, dst.ticks)
+          --pldump({ dst=dst })
           p.mov.dst = dst
         end
       end

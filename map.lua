@@ -133,35 +133,41 @@ end
 function updateDisplayGrid(map, viewport)
   assert(map)
   assert(viewport)
-  if not updateDgViewAndDetectChange(map, viewport) then
-    return
+  --printf("VP map offset: XY=%d,%d", viewport.mapOffset.unpack())
+  if updateDgViewAndDetectChange(map, viewport) then
+    --print("UPDATE.")
+    --pldump({ vp = viewport, dv = map.display.view })
+    local dv = map.display.view
+    printf("UPDATE: VP.MO=(%d, %d), DV=(r=%d, c=%d, x=%d, y=%d)",
+      viewport.mapOffset.x, viewport.mapOffset.y,
+      dv.r, dv.c, dv.x, dv.y)
+    updateDisplaySpriteBatch(map, viewport)
   end
-  print("UPDATE.")
-  pldump({ vp = viewport, dv = map.display.view })
-  updateDisplaySpriteBatch(map, viewport)
 end
 
 function updateDgViewAndDetectChange(map, viewport)
   local rc = viewport.mapOffset.toCx(map.tileSize)
+  local r, c = rc.unpack()
   -- Converting back to pixels, we get the position rounded
-  -- down to a cell boundary.
+  -- down to a cell boundary. Subtracting viewport.mapOffset,
+  -- we get the difference between the raw and rounded offset.
   local xy = rc.toPx(map.tileSize).sub(viewport.mapOffset)
-  --pldump(rc); pldump(xy)
+  --pldump({ vpRC=rc, xy=xy })
   local oldView = map.display.view
   map.display.view = { r=r, c=c, y=xy.y, x=xy.x }
+  --printf("OLD: RC=%d,%d; NEW: RC=%d,%d", oldView.r or -99, oldView.c or -99, r, c)
   return not (r == oldView.r and c == oldView.c)
 end
 
 function updateDisplaySpriteBatch(map, viewport)
   print("updateDisplaySpriteBatch")
-  local displaySizeCx = viewport.screenSize
-    .toCxCeil(map.tileSize)
-    .add(CxPos(1,1))
+  local displaySizeCx = viewport.screenSize.toCxCeil(map.tileSize)
+    .add(CxSize(1,1)) -- XXX
   local sb = map.display.spriteBatch
   local dv = map.display.view
   sb:clear()
   local y = dv.y
-  pldump({ dv=dv, displaySizeCx=displaySizeCx })
+  --pldump({ dv=dv, displaySizeCx=displaySizeCx })
   for r = dv.r, dv.r + displaySizeCx.cxH do
     local x = dv.x
     for c = dv.c, dv.c + displaySizeCx.cxW do
@@ -172,7 +178,7 @@ function updateDisplaySpriteBatch(map, viewport)
           printf("Cell: %d at (%f, %f) (r=%d,c=%d)", cell.t.id, x, y, r, c)
         end
       else
-        printf("Cell: NIL at (%f,%f) (r=%d,c=%d)", x, y, r, c)
+        --printf("Cell: NIL at (%f,%f) (r=%d,c=%d)", x, y, r, c)
       end
       x = x + map.tileSize.pxW
     end
@@ -190,6 +196,8 @@ function drawMap(map, viewport)
   assert(viewport.mapOffset.t == "PxPos")
   updateDisplayGrid(map, viewport)
   local dv = map.display.view
+  --pldump({viewport.screenOffset.unpack()})
+  --pldump(dv)
   love.graphics.draw(map.display.spriteBatch,
     viewport.screenOffset.unpack(),
     0, 1, 1, -- r, sx, sy (default values)

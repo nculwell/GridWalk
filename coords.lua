@@ -82,11 +82,11 @@ function PxSize(w, h)
   end
   function s.toCx(q)
     assert(q.t == "PxSize", "t: "..q.t)
-    return PxSize(math.floor(s.pxW/q.pxW), math.floor(s.pxH/q.pxH))
+    return CxSize(math.floor(s.pxW/q.pxW), math.floor(s.pxH/q.pxH))
   end
   function s.toCxCeil(q)
     assert(q.t == "PxSize", "t: "..q.t)
-    return PxSize(math.ceil(s.pxW/q.pxW), math.ceil(s.pxH/q.pxH))
+    return CxSize(math.ceil(s.pxW/q.pxW), math.ceil(s.pxH/q.pxH))
   end
   return s
 end
@@ -99,11 +99,11 @@ function CxSize(w, h)
   local s = { cxW=w, cxH=h, t="CxSize" }
   function s.add(q)
     assert(q.t == "CxSize", "CxSize.add t: "..q.t)
-    return CxSize(s.pxW+q.pxW, s.pxH+q.pxH)
+    return CxSize(s.cxW+q.cxW, s.cxH+q.cxH)
   end
   function s.sub(q)
     assert(q.t == "CxSize", "CxSize.sub t: "..q.t)
-    return CxSize(s.pxW-q.pxW, s.pxH-q.pxH)
+    return CxSize(s.cxW-q.cxW, s.cxH-q.cxH)
   end
   function s.scale(factor)
     assert(type(factor) == "number", "Factor type: "..type(factor))

@@ -1,6 +1,6 @@
 function love.conf(t)
   t.version = "0.10.1"
-  t.window.vsync = true
+  t.window.vsync = false
   t.console = true
   --t.fullscreentype = "exclusive"
   t.modules.audio = true
