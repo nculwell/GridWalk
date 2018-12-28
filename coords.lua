@@ -31,19 +31,19 @@ function PxPos(x, y)
 end
 
 function CxPos(r, c)
-  assert(r)
-  assert(c)
+  assert(r, "CxPos R nil.")
+  assert(c, "CxPos C nil.")
   assert(type(r) == "number")
   assert(type(c) == "number")
   local p = { r=r, c=c, t="CxPos" }
   function p.add(q)
     assert(q.t == "CxPos" or q.t == "CxSize", "t: "..q.t.." (CxPos|CxSize)")
-    q = CxPos(q.unpack())
+    if q.t == "CxSize" then q = CxPos(q.cxH, q.cxW) end
     return CxPos(p.r+q.r, p.c+q.c)
   end
   function p.sub(q)
     assert(q.t == "CxPos" or q.t == "CxSize", "t: "..q.t.." (CxPos|CxSize)")
-    q = CxPos(q.unpack())
+    if q.t == "CxSize" then q = CxPos(q.cxH, q.cxW) end
     return CxPos(p.r-q.r, p.c-q.c)
   end
   function p.toPx(s)
@@ -107,7 +107,13 @@ function CxSize(w, h)
   end
   function s.scale(factor)
     assert(type(factor) == "number", "Factor type: "..type(factor))
-    return CxSize(math.floor(s.cxW*factor), math.floor(s.cxH*factor))
+    return CxSize(s.cxW*factor, s.cxH*factor)
+  end
+  function s.floor()
+    return CxSize(math.floor(s.cxW), math.floor(s.cxH))
+  end
+  function s.ceil()
+    return CxSize(math.floor(s.cxW), math.floor(s.cxH))
   end
   function s.unpack()
     return s.cxW, s.cxH

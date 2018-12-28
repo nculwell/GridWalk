@@ -73,13 +73,15 @@ function toggleFullscreen()
 end
 
 function setCharPhase(c, phase)
-  local delta = c.mov.nxt.sub(c.mov.prv)
-  pldump(delta)
-  local deltaAsSize = delta.toCxSize()
-  pldump(deltaAsSize)
-  local deltaScaled = deltaAsSize.scale(phase)
-  pldump(deltaScaled)
-  c.mov.phase = c.mov.prv.add(deltaScaled)
+  if c.mov.dst.isMoving then
+    local delta = c.mov.nxt.sub(c.mov.prv)
+    local deltaAsSize = delta.toCxSize()
+    local deltaScaled = deltaAsSize.scale(phase)
+    --print("PHASE="..phase); pldump({ phaseDelta=deltaScaled })
+    c.mov.phase = c.mov.prv.add(deltaScaled)
+  else
+    c.mov.phase = c.mov.dst.pos
+  end
 end
 
 function moveChar(c)
@@ -87,19 +89,23 @@ function moveChar(c)
   --pl.pretty.dump(m)
   m.dst.isMoving = false
   if m.dst.ticks and m.dst.ticks > 0 then
+    pldump({ nxt=m.nxt })
     m.prv = m.nxt
     --pldump({prv=m.prv,dst=m.dst.pos})
     local delta =
       m.dst.pos
       .sub(m.prv)
       .toCxSize()
+    pldump({ delta1=delta })
+    delta = delta
       .scale(1/m.dst.ticks)
-    --pldump(delta)
+    pldump({ tickDelta=delta })
     m.nxt = m.prv.add(delta)
     m.dst.ticks = m.dst.ticks - 1
     if m.dst.ticks == 0 then
       printf("MOVE COMPLETE: RC=%d,%d", m.dst.pos.unpack())
     else
+      printf("STILL MOVING: RC=%d,%d", m.dst.pos.unpack())
       m.dst.isMoving = true
     end
   end
