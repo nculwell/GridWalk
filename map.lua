@@ -199,9 +199,9 @@ function drawMap(map, viewport)
   --pldump({viewport.screenOffset.unpack()})
   --pldump(dv)
   love.graphics.draw(map.display.spriteBatch,
-    viewport.screenOffset.unpack(),
-    0, 1, 1, -- r, sx, sy (default values)
-    -dv.x, -dv.y)
+    viewport.screenOffset.unpack())
+    --0, 1, 1, -- r, sx, sy (default values)
+    ---dv.x, -dv.y)
 end
 
 function nextPowerOf2(n)
