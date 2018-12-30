@@ -15,7 +15,7 @@ local mapH = 20
 --local TICKS_PER_SECOND = 10
 local TICKS_PER_SECOND = 10
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
-local MOVES_PER_TILE = 5
+local MOVES_PER_TILE = 3
 local START_POS = CxPos(1, 1)
 local VSYNC = false
 local FULLSCREENTYPE = "desktop"
@@ -130,6 +130,25 @@ end
 
 function moveChar(c)
   local m = c.mov
+  m.dst.isMoving = false
+  if m.dst.ticks and m.dst.ticks > 0 then
+    m.dst.ticks = m.dst.ticks - 1
+    m.prv = m.dst.pos
+    m.nxt = m.dst.pos
+    m.phase = m.dst.pos
+    if m.dst.ticks == 0 then
+      printf("MOVE COMPLETE: RC=%d,%d", m.dst.pos.unpack())
+    else
+      m.dst.isMoving = true
+    end
+    return true
+  else
+    return false
+  end
+end
+
+function moveCharPOSTPONED(c)
+  local m = c.mov
   --pl.pretty.dump(m)
   m.dst.isMoving = false
   if m.dst.ticks and m.dst.ticks > 0 then
@@ -157,6 +176,12 @@ function moveChar(c)
 end
 
 function setCharPhase(c, phase)
+  if not c.mov.phase then
+    c.mov.phase = c.mov.dst.pos
+  end
+end
+
+function setCharPhasePOSTPONED(c, phase)
   if c.mov.dst.isMoving then
     local delta = c.mov.nxt.sub(c.mov.prv)
     local deltaAsSize = delta.toCxSize()
