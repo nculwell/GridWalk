@@ -81,10 +81,12 @@ function PxSize(w, h)
     return PxSize(math.floor(s.pxW*factor), math.floor(s.pxH*factor))
   end
   function s.toCx(q)
+    assert(q, "PxSize.toCx: q")
     assert(q.t == "PxSize", "t: "..q.t)
     return CxSize(math.floor(s.pxW/q.pxW), math.floor(s.pxH/q.pxH))
   end
   function s.toCxCeil(q)
+    assert(q, "PxSize.toCx: q")
     assert(q.t == "PxSize", "t: "..q.t)
     return CxSize(math.ceil(s.pxW/q.pxW), math.ceil(s.pxH/q.pxH))
   end
@@ -114,6 +116,11 @@ function CxSize(w, h)
   end
   function s.ceil()
     return CxSize(math.floor(s.cxW), math.floor(s.cxH))
+  end
+  function s.toPx(q)
+    assert(q, "CxSize.toPx: q")
+    assert(q.t == "PxSize", "t: "..q.t.." (PxSize)")
+    return PxSize(s.cxW*q.pxW, s.cxH*q.pxH)
   end
   function s.unpack()
     return s.cxW, s.cxH

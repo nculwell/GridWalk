@@ -1,4 +1,4 @@
--- vim: et ts=8 sts=2 sw=2
+-- vim: nu et ts=8 sts=2 sw=2
 
 local module = {}
 
@@ -99,17 +99,19 @@ end
 
 function buildDisplayGrid(map)
   map.display = {}
-  local screenW, screenH = love.graphics.getDimensions()
-  local minWCells = math.ceil(screenW / map.tileSize.pxW)
-  local minHCells = math.ceil(screenH / map.tileSize.pxH)
-  local wCells = minWCells + 2 * MAP_DISPLAY_EXTRA_CELLS
-  local hCells = minHCells + 2 * MAP_DISPLAY_EXTRA_CELLS
-  --map.display.sizeCells = { cxW=wCells, cxH=hCells }
-  --local wPx = map.tileSize.pxW * wCells
-  --local hPx = map.tileSize.pxH * hCells
-  --map.display.canvas = love.graphics.newCanvas(wPx, hPx)
+  local screenSize = PxSize(love.graphics.getDimensions())
+  local minScreenSizeCx = screenSize.toCx(map.tileSize)
+  local padding = 2 * MAP_DISPLAY_EXTRA_CELLS
+  local paddedScreenSizeCx = minScreenSizeCx.add(CxSize(padding, padding))
+  local paddedScreenCellCount = paddedScreenSizeCx.cxW * paddedScreenSizeCx.cxH
+  map.display.sizeCx = paddedScreenSizeCx
+  local paddedScreenSizePx = paddedScreenSizeCx.toPx(map.tileSize)
+  printf("Map display buffer size: %d x %d cells", paddedScreenSizeCx.unpack())
+  printf("Map display buffer size: %d x %d px", paddedScreenSizePx.unpack())
+  map.display.canvas = love.graphics.newCanvas(paddedScreenSizePx.unpack())
+  map.display.canvas:setWrap("clamp", "clamp")
   map.display.spriteBatch =
-    love.graphics.newSpriteBatch(map.tilesetImage, wCells * hCells)
+    love.graphics.newSpriteBatch(map.tilesetImage, paddedScreenCellCount)
   map.display.view = { r=nil, c=nil }
 end
 
@@ -185,6 +187,10 @@ function updateDisplaySpriteBatch(map, viewport)
     y = y + map.tileSize.pxH
   end
   sb:flush()
+  map.display.canvas:renderTo(function()
+    love.graphics.draw(map.display.spriteBatch)
+  end)
+  map.display.image = map.display.canvas:newImageData()
   --printf("Cells: %d x %d", #(map.cells), #(map.cells[1]))
 end
 
@@ -198,10 +204,7 @@ function drawMap(map, viewport)
   local dv = map.display.view
   --pldump({viewport.screenOffset.unpack()})
   --pldump(dv)
-  love.graphics.draw(map.display.spriteBatch,
-    viewport.screenOffset.unpack())
-    --0, 1, 1, -- r, sx, sy (default values)
-    ---dv.x, -dv.y)
+  love.graphics.draw(map.display.canvas, -dv.x, -dv.y)
 end
 
 function nextPowerOf2(n)

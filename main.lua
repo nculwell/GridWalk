@@ -206,6 +206,8 @@ function love.draw()
   local playerMovePhase = p.mov.phase
   local pos = playerMovePhase.toPx(tileSize)
   local playerTileDisplayOffset = center.sub(tileSize.scale(.5))
+  --print("playerTileDisplayOffset", playerTileDisplayOffset.toCx(tileSize).unpack())
+  --pldump(playerTileDisplayOffset.toCx(tileSize))
   local mapViewport = {
     screenOffset = PxPos(0, 0),
     screenSize = screenSize,
