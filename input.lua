@@ -8,7 +8,7 @@ pldump = pl.pretty.dump
 
 local moveKeys = {}
 local joystick1 = nil
-local joystick1Axes = nil
+local joystick1Conf = nil
 
 function module.load()
     local joysticks = love.joystick.getJoysticks()
@@ -22,13 +22,16 @@ function module.load()
         printf("Joystick1 counts: hats=%d, axes=%d, buttons=%d",
           joystick1:getHatCount(), joystick1:getAxisCount(),
           joystick1:getButtonCount())
-        joystick1Axes = {}
+        joystick1Conf = {}
         local guid = joystick1:getGUID()
         print("Joystick GUID: "..guid)
         if guid == "79001100000000000000504944564944" then
           print("GUID recognized: SNES style.")
-          joystick1Axes.axisLR = 1
-          joystick1Axes.axisUD = 5
+          joystick1Conf = {
+            axisLR = 1, axisUD = 5,
+            buttonA = 2, buttonB = 3, buttonX = 1, buttonY = 4,
+            buttonR = 6, buttonL = 5, buttonStart = 10, buttonSelect = 9,
+          }
         end
       end
     else
@@ -58,6 +61,27 @@ function module.gamepadpressed(eventJoystick, eventButton)
       local direction = strsub(eventButton, 3)
       moveKeys[direction] = true
     end
+  end
+end
+
+function module.gamepadpressed(eventJoystick, eventButton)
+  printf("GamepadPressed: %s %s", eventJoystick, eventButton)
+end
+
+function module.joystickpressed(eventJoystick, eventButton)
+  printf("JoystickPressed: %s %s", eventJoystick, eventButton)
+  local code = ""
+  if eventButton == joystick1Conf.buttonA then code = "a"
+  elseif eventButton == joystick1Conf.buttonB then code = "b"
+  elseif eventButton == joystick1Conf.buttonX then code = "x"
+  elseif eventButton == joystick1Conf.buttonY then code = "y"
+  elseif eventButton == joystick1Conf.buttonL then code = "l"
+  elseif eventButton == joystick1Conf.buttonR then code = "r"
+  elseif eventButton == joystick1Conf.buttonSelect then code = "select"
+  elseif eventButton == joystick1Conf.buttonStart then code = "start"
+  end
+  if code ~= "" then
+    print("Joystick button: "..code)
   end
 end
 
@@ -92,9 +116,9 @@ function module.getMovementCommand()
         else print("Hat direction unknown: "..hatDir)
         end
       end
-      if joystick1Axes and joystick1Axes.axisLR and joystick1Axes.axisUD then
-        axisLR = joystick1:getAxis(joystick1Axes.axisLR)
-        axisUD = joystick1:getAxis(joystick1Axes.axisUD)
+      if joystick1Conf and joystick1Conf.axisLR and joystick1Conf.axisUD then
+        axisLR = joystick1:getAxis(joystick1Conf.axisLR)
+        axisUD = joystick1:getAxis(joystick1Conf.axisUD)
         if axisLR == -1 then m["left"] = true end
         if axisLR ==  1 then m["right"] = true end
         if axisUD == -1 then m["up"] = true end

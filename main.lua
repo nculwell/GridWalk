@@ -53,23 +53,9 @@ end
 
 -- Map input events to the input module.
 love.keypressed = inputModule.keypressed
---love.gamepadpressed = inputModule.gamepadpressed
-
-function love.gamepadpressed(eventJoystick, eventButton)
-  printf("JB: %s %s", eventJoystick, eventButton)
-end
-
-function love.joystickpressed(eventJoystick, eventButton)
-  printf("Joypress: %s %s", eventJoystick, eventButton)
-end
-
-function love.joystickhat(joystick, hat, direction)
-  printf("Hat: %s, %s, %s", joystick, hat, direction)
-end
-
-function love.gamepadaxis( joystick, axis, value )
-  printf("Axis: %s, %s, %s", joystick, axis, value)
-end
+love.gamepadpressed = inputModule.gamepadpressed
+love.joystickpressed = inputModule.joystickpressed
+love.gamepadpressed = inputModule.gamepadpressed
 
 function toggleFullscreen()
   glo.fullscreen = not glo.fullscreen
