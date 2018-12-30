@@ -147,6 +147,7 @@ function updateDisplayGrid(map, viewport)
 end
 
 function updateDgViewAndDetectChange(map, viewport)
+  -- TODO: Redraw only when view extends past drawn area.
   local rc = viewport.mapOffset.toCx(map.tileSize)
   local r, c = rc.unpack()
   -- Converting back to pixels, we get the position rounded

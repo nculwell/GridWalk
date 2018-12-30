@@ -7,6 +7,7 @@ local PxPos, CxPos, PxSize, CxSize =
   coords.PxPos, coords.CxPos, coords.PxSize, coords.CxSize
 local TICKS_PER_SECOND = 10
 local map = require("map")
+local inputModule = require("input")
 local pl = {}
 pl.pretty = require("pl.pretty")
 pldump = pl.pretty.dump
@@ -47,19 +48,27 @@ function love.load()
   glo.nextTickTime = 0
   dbg.init("gridwalk.log")
   glo.map = map.loadMap()
+  inputModule.load()
 end
 
-function love.keypressed(key)
-  if key == "q" then
-    dbg.print("QUITTING")
-    love.event.quit()
-  elseif key == "space" then
-    paused = not paused
-  elseif key == "f" then
-    toggleFullscreen()
-  elseif key == "up" or key == "down" or key == "left" or key == "right" then
-    glo.moveKeys[key] = true
-  end
+-- Map input events to the input module.
+love.keypressed = inputModule.keypressed
+--love.gamepadpressed = inputModule.gamepadpressed
+
+function love.gamepadpressed(eventJoystick, eventButton)
+  printf("JB: %s %s", eventJoystick, eventButton)
+end
+
+function love.joystickpressed(eventJoystick, eventButton)
+  printf("Joypress: %s %s", eventJoystick, eventButton)
+end
+
+function love.joystickhat(joystick, hat, direction)
+  printf("Hat: %s, %s, %s", joystick, hat, direction)
+end
+
+function love.gamepadaxis( joystick, axis, value )
+  printf("Axis: %s, %s, %s", joystick, axis, value)
 end
 
 function toggleFullscreen()
@@ -86,7 +95,7 @@ function love.update(dt)
     local playerMoving = moveChar(glo.player, phase)
     -- Handle next move
     if not playerMoving then
-      moveCmd = scanMoveKeys()
+      moveCmd = inputModule.getMovementCommand()
       if moveCmd.isMoved then
         --pl.pretty.dump(moveCmd)
         dst = computeMovDst(glo.player, moveCmd.dst, MOVES_PER_TILE)
