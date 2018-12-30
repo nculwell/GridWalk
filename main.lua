@@ -72,59 +72,6 @@ function toggleFullscreen()
   love.window.setMode(screenW, screenH, newFlags)
 end
 
-function setCharPhase(c, phase)
-  if c.mov.dst.isMoving then
-    local delta = c.mov.nxt.sub(c.mov.prv)
-    local deltaAsSize = delta.toCxSize()
-    local deltaScaled = deltaAsSize.scale(phase)
-    --print("PHASE="..phase); pldump({ phaseDelta=deltaScaled })
-    --printf("Phase delta: RC=%f,%f", deltaScaled.cxH, deltaScaled.cxW)
-    c.mov.phase = c.mov.prv.add(deltaScaled)
-  else
-    c.mov.phase = c.mov.dst.pos
-  end
-end
-
-function moveChar(c)
-  local m = c.mov
-  --pl.pretty.dump(m)
-  m.dst.isMoving = false
-  if m.dst.ticks and m.dst.ticks > 0 then
-    --pldump({ nxt=m.nxt })
-    m.prv = m.nxt
-    --pldump({prv=m.prv,dst=m.dst.pos})
-    local delta =
-      m.dst.pos
-      .sub(m.prv)
-      .toCxSize()
-    --pldump({ delta1=delta })
-    delta = delta
-      .scale(1/m.dst.ticks)
-    --pldump({ tickDelta=delta })
-    printf("Tick delta: RC=%f,%f", delta.cxH, delta.cxW)
-    m.nxt = m.prv.add(delta)
-    m.dst.ticks = m.dst.ticks - 1
-    if m.dst.ticks == 0 then
-      printf("MOVE COMPLETE: RC=%d,%d", m.dst.pos.unpack())
-    else
-      printf("STILL MOVING: RC=%d,%d", m.dst.pos.unpack())
-      m.dst.isMoving = true
-    end
-  end
-end
-
-function computeMovDst(c, moveCmdCx, ticks)
-  local currentCx = c.mov.dst.pos
-  local moveToCx = currentCx.add(moveCmdCx)
-  --pl.pretty.dump({x,y})
-  --pl.pretty.dump(glo.map.tiles[y+1])
-  local destCell = glo.map:cellAt(moveToCx.unpack())
-  if not (destCell and not destCell.t.pass) then
-    printf("SKIP: RC=%d,%d", moveToCx.unpack())
-  end
-  return { pos=moveToCx, ticks=ticks }
-end
-
 function love.update(dt)
   if paused then return end
   local time = love.timer.getTime() - glo.startTime
@@ -167,6 +114,59 @@ function scanMoveKeys()
     isMoved = not (w == 0 and h == 0),
   }
   return moveCmd
+end
+
+function computeMovDst(c, moveCmdCx, ticks)
+  local currentCx = c.mov.dst.pos
+  local moveToCx = currentCx.add(moveCmdCx)
+  --pl.pretty.dump({x,y})
+  --pl.pretty.dump(glo.map.tiles[y+1])
+  local destCell = glo.map:cellAt(moveToCx.unpack())
+  if not (destCell and not destCell.t.pass) then
+    printf("SKIP: RC=%d,%d", moveToCx.unpack())
+  end
+  return { pos=moveToCx, ticks=ticks }
+end
+
+function moveChar(c)
+  local m = c.mov
+  --pl.pretty.dump(m)
+  m.dst.isMoving = false
+  if m.dst.ticks and m.dst.ticks > 0 then
+    --pldump({ nxt=m.nxt })
+    m.prv = m.nxt
+    --pldump({prv=m.prv,dst=m.dst.pos})
+    local delta =
+      m.dst.pos
+      .sub(m.prv)
+      .toCxSize()
+    --pldump({ delta1=delta })
+    delta = delta
+      .scale(1/m.dst.ticks)
+    --pldump({ tickDelta=delta })
+    printf("Tick delta: RC=%f,%f", delta.cxH, delta.cxW)
+    m.nxt = m.prv.add(delta)
+    m.dst.ticks = m.dst.ticks - 1
+    if m.dst.ticks == 0 then
+      printf("MOVE COMPLETE: RC=%d,%d", m.dst.pos.unpack())
+    else
+      printf("STILL MOVING: RC=%d,%d", m.dst.pos.unpack())
+      m.dst.isMoving = true
+    end
+  end
+end
+
+function setCharPhase(c, phase)
+  if c.mov.dst.isMoving then
+    local delta = c.mov.nxt.sub(c.mov.prv)
+    local deltaAsSize = delta.toCxSize()
+    local deltaScaled = deltaAsSize.scale(phase)
+    --print("PHASE="..phase); pldump({ phaseDelta=deltaScaled })
+    --printf("Phase delta: RC=%f,%f", deltaScaled.cxH, deltaScaled.cxW)
+    c.mov.phase = c.mov.prv.add(deltaScaled)
+  else
+    c.mov.phase = c.mov.dst.pos
+  end
 end
 
 -----------------------------------------------------------
