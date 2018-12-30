@@ -86,7 +86,7 @@ function module.joystickpressed(eventJoystick, eventButton)
 end
 
 function module.getMovementCommand()
-  local h, w = 0, 0
+  local x, y = 0, 0
   -- Get local reference to phaseMove and then reset it.
   local m = phaseMove
   phaseMove = {}
@@ -98,15 +98,11 @@ function module.getMovementCommand()
       scanJoystickMove(m, joystick1, joystick1Conf)
     end
   end
-  if m["left"] then w = w - 1 end
-  if m["right"] then w = w + 1 end
-  if m["up"] then h = h - 1 end
-  if m["down"] then h = h + 1 end
-  local moveCmd = {
-    dst = CxSize(w, h),
-    isMoved = not (w == 0 and h == 0),
-  }
-  return moveCmd
+  if m["left"] then x = x - 1 end
+  if m["right"] then x = x + 1 end
+  if m["up"] then y = y - 1 end
+  if m["down"] then y = y + 1 end
+  return { x=x, y=y }
 end
 
 function scanArrowKeysMove(m)
@@ -141,6 +137,7 @@ function scanJoystickMove(m, js, jsConf)
     end
   end
   if jsConf and jsConf.axisLR and jsConf.axisUD then
+    -- TODO: Use threshold instead of +/-1.
     axisLR = js:getAxis(jsConf.axisLR)
     axisUD = js:getAxis(jsConf.axisUD)
     if axisLR == -1 then m["left"] = true end

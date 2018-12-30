@@ -81,10 +81,11 @@ function love.update(dt)
     local playerMoving = moveChar(glo.player, phase)
     -- Handle next move
     if not playerMoving then
-      moveCmd = inputModule.getMovementCommand()
-      if moveCmd.isMoved then
+      local moveXY = inputModule.getMovementCommand()
+      local moveCmd = CxSize(moveXY.x, moveXY.y)
+      if not (moveXY.x == 0 and moveXY.y == 0) then
         --pl.pretty.dump(moveCmd)
-        dst = computeMovDst(glo.player, moveCmd.dst, MOVES_PER_TILE)
+        dst = computeMovDst(glo.player, moveCmd, MOVES_PER_TILE)
         if dst then
           printf("MOVING: (%d, %d), ticks=%d", dst.pos.r, dst.pos.c, dst.ticks)
           --pldump({ dst=dst })
@@ -94,21 +95,6 @@ function love.update(dt)
     end
   end
   setCharPhase(glo.player, phase)
-end
-
-function scanMoveKeys()
-  local h, w = 0, 0
-  local m = glo.moveKeys
-  glo.moveKeys = {}
-  if love.keyboard.isDown("left") or m["left"] then w = w - 1 end
-  if love.keyboard.isDown("right") or m["right"] then w = w + 1 end
-  if love.keyboard.isDown("up") or m["up"] then h = h - 1 end
-  if love.keyboard.isDown("down") or m["down"] then h = h + 1 end
-  local moveCmd = {
-    dst = CxSize(w, h),
-    isMoved = not (w == 0 and h == 0),
-  }
-  return moveCmd
 end
 
 function computeMovDst(c, moveCmdCx, ticks)
