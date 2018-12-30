@@ -109,7 +109,6 @@ function buildDisplayGrid(map)
   printf("Map display buffer size: %d x %d cells", paddedScreenSizeCx.unpack())
   printf("Map display buffer size: %d x %d px", paddedScreenSizePx.unpack())
   map.display.canvas = love.graphics.newCanvas(paddedScreenSizePx.unpack())
-  map.display.canvas:setWrap("clamp", "clamp")
   map.display.spriteBatch =
     love.graphics.newSpriteBatch(map.tilesetImage, paddedScreenCellCount)
   map.display.view = { r=nil, c=nil }
@@ -188,6 +187,7 @@ function updateDisplaySpriteBatch(map, viewport)
   end
   sb:flush()
   map.display.canvas:renderTo(function()
+    love.graphics.clear()
     love.graphics.draw(map.display.spriteBatch)
   end)
   map.display.image = map.display.canvas:newImageData()
