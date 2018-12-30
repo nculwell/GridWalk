@@ -6,7 +6,7 @@ local pl = {}
 pl.pretty = require("pl.pretty")
 pldump = pl.pretty.dump
 
-local moveKeys = {}
+local phaseMove = {}
 local joystick1 = nil
 local joystick1Conf = nil
 
@@ -48,7 +48,7 @@ function module.keypressed(key)
   elseif key == "f" then
     toggleFullscreen()
   elseif key == "up" or key == "down" or key == "left" or key == "right" then
-    moveKeys[key] = true
+    phaseMove[key] = true
   end
 end
 
@@ -59,7 +59,7 @@ function module.gamepadpressed(eventJoystick, eventButton)
     if eventButton == "dpleft" or eventButton == "dpright"
         or eventButton == "dpup" or eventButton == "dpdown" then
       local direction = strsub(eventButton, 3)
-      moveKeys[direction] = true
+      phaseMove[direction] = true
     end
   end
 end
@@ -87,43 +87,15 @@ end
 
 function module.getMovementCommand()
   local h, w = 0, 0
-  local m = moveKeys
-  moveKeys = {}
-  if love.keyboard.isDown("left") then m["left"] = true end
-  if love.keyboard.isDown("right") then m["right"] = true end
-  if love.keyboard.isDown("up") then m["up"] = true end
-  if love.keyboard.isDown("down") then m["down"] = true end
+  -- Get local reference to phaseMove and then reset it.
+  local m = phaseMove
+  phaseMove = {}
+  scanArrowKeysMove(m)
   if joystick1 then
     if joystick1:isGamepad() then
-      if joystick1:isGamepadDown("dpleft") then m["left"] = true end
-      if joystick1:isGamepadDown("dpright") then m["right"] = true end
-      if joystick1:isGamepadDown("dpup") then m["up"] = true end
-      if joystick1:isGamepadDown("dpdown") then m["down"] = true end
+      scanGamepadMove(m, joystick1)
     else
-      -- TODO: For loop over hats (if any)
-      local hatDir = joystick1:getHat(1)
-      if hatDir and hatDir ~= "" then
-        if hatDir == "l" then m["left"] = true
-        elseif hatDir == "r" then m["right"] = true
-        elseif hatDir == "u" then m["up"] = true
-        elseif hatDir == "d" then m["down"] = true
-        elseif hatDir == "lu" then m["left"] = true; m["up"] = true
-        elseif hatDir == "ld" then m["left"] = true; m["down"] = true
-        elseif hatDir == "ru" then m["right"] = true; m["up"] = true
-        elseif hatDir == "rd" then m["right"] = true; m["down"] = true
-        elseif hatDir == "c" then
-          -- do nothing if hat is centered
-        else print("Hat direction unknown: "..hatDir)
-        end
-      end
-      if joystick1Conf and joystick1Conf.axisLR and joystick1Conf.axisUD then
-        axisLR = joystick1:getAxis(joystick1Conf.axisLR)
-        axisUD = joystick1:getAxis(joystick1Conf.axisUD)
-        if axisLR == -1 then m["left"] = true end
-        if axisLR ==  1 then m["right"] = true end
-        if axisUD == -1 then m["up"] = true end
-        if axisUD ==  1 then m["down"] = true end
-      end
+      scanJoystickMove(m, joystick1, joystick1Conf)
     end
   end
   if m["left"] then w = w - 1 end
@@ -135,6 +107,47 @@ function module.getMovementCommand()
     isMoved = not (w == 0 and h == 0),
   }
   return moveCmd
+end
+
+function scanArrowKeysMove(m)
+  if love.keyboard.isDown("left") then m["left"] = true end
+  if love.keyboard.isDown("right") then m["right"] = true end
+  if love.keyboard.isDown("up") then m["up"] = true end
+  if love.keyboard.isDown("down") then m["down"] = true end
+end
+
+function scanGamepadMove(m, js)
+  if js:isGamepadDown("dpleft") then m["left"] = true end
+  if js:isGamepadDown("dpright") then m["right"] = true end
+  if js:isGamepadDown("dpup") then m["up"] = true end
+  if js:isGamepadDown("dpdown") then m["down"] = true end
+end
+
+function scanJoystickMove(m, js, jsConf)
+  -- TODO: For loop over hats (if any)
+  local hatDir = js:getHat(1)
+  if hatDir and hatDir ~= "" then
+    if hatDir == "l" then m["left"] = true
+    elseif hatDir == "r" then m["right"] = true
+    elseif hatDir == "u" then m["up"] = true
+    elseif hatDir == "d" then m["down"] = true
+    elseif hatDir == "lu" then m["left"] = true; m["up"] = true
+    elseif hatDir == "ld" then m["left"] = true; m["down"] = true
+    elseif hatDir == "ru" then m["right"] = true; m["up"] = true
+    elseif hatDir == "rd" then m["right"] = true; m["down"] = true
+    elseif hatDir == "c" then
+      -- do nothing if hat is centered
+    else print("Hat direction unknown: "..hatDir)
+    end
+  end
+  if jsConf and jsConf.axisLR and jsConf.axisUD then
+    axisLR = js:getAxis(jsConf.axisLR)
+    axisUD = js:getAxis(jsConf.axisUD)
+    if axisLR == -1 then m["left"] = true end
+    if axisLR ==  1 then m["right"] = true end
+    if axisUD == -1 then m["up"] = true end
+    if axisUD ==  1 then m["down"] = true end
+  end
 end
 
 return module
