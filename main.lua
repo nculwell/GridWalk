@@ -10,6 +10,7 @@ local map = require("map")
 local inputModule = require("input")
 local pl = {}
 pl.pretty = require("pl.pretty")
+pl.app = require("pl.app")
 pldump = pl.pretty.dump
 
 local mapH = 20
@@ -42,6 +43,7 @@ end
 
 function love.load()
   print()
+  local flags, args = pl.app.parse_args()
   toggleFullscreen()
   love.window.setTitle("Wandrix")
   glo.startTime = love.timer.getTime()

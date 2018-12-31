@@ -36,7 +36,7 @@ function module.loadMap()
   printf("TileSize: %d x %d", map.tileSize.unpack())
   buildTileGrid(map)
   buildDisplayGrid(map)
-  mapgen.buildRandomMap(seed, map.tiles, map.size)
+  map.cells = mapgen.buildRandomMap(seed, map.tiles, map.size)
   playerSprite = buildPlayerSprite(map)
   return map
 end
