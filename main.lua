@@ -21,6 +21,7 @@ local START_POS = CxPos(1, 1)
 local VSYNC = false
 local FULLSCREENTYPE = "desktop"
 -- local FULLSCREENTYPE = "exclusive"
+local footsteps = {}
 
 local glo = {
   fullscreen=true,
@@ -49,6 +50,12 @@ function love.load()
   dbg.init("gridwalk.log")
   glo.map = map.loadMap()
   inputModule.load()
+  for s = 1, 8 do
+    local filename = "sound/fsl/Footstep_Dirt_0"..(s-1)..".mp3"
+    local sd = love.sound.newSoundData(filename)
+    footsteps[s] = love.audio.newSource(sd)
+  end
+  footsteps.next = 1
 end
 
 -- Map input events to the input module.
@@ -90,6 +97,10 @@ function love.update(dt)
           printf("MOVING: (%d, %d), ticks=%d", dst.pos.r, dst.pos.c, dst.ticks)
           --pldump({ dst=dst })
           p.mov.dst = dst
+          --pldump(footsteps)
+          love.audio.play(footsteps[footsteps.next])
+          footsteps.next = footsteps.next + 1
+          if footsteps.next > #footsteps then footsteps.next = 1 end
         end
       end
     end
@@ -181,40 +192,27 @@ end
 function love.draw()
   local p = glo.player
   -- Calculations
-  local screenSize = PxSize(love.graphics.getDimensions())
-  local center = screenSize.scale(.5)
+  local shortDimension = math.min(love.graphics.getDimensions())
+  local mapDisplaySize = PxSize(shortDimension, shortDimension)
+  local center = mapDisplaySize.scale(.5)
   local tileSize = glo.map:getTileSize()
   local playerMovePhase = p.mov.phase
   local pos = playerMovePhase.toPx(tileSize)
   local playerTileDisplayOffset = center.sub(tileSize.scale(.5))
-  --print("playerTileDisplayOffset", playerTileDisplayOffset.toCx(tileSize).unpack())
-  --pldump(playerTileDisplayOffset.toCx(tileSize))
   local mapViewport = {
     screenOffset = PxPos(0, 0),
-    screenSize = screenSize,
+    displaySize = mapDisplaySize,
     mapOffset = pos.sub(playerTileDisplayOffset)
   }
-  --glo.map:update(mapViewport)
   -- Background
   love.graphics.clear()
-  --love.graphics.setColor(clr.GREEN)
-  --rect("fill", 0, 0, screenSizeW, screenSizeH)
   love.graphics.setColor(clr.WHITE)
-  --love.graphics.draw(glo.map.image, centerX-pos.x, centerY-pos.y)
-  glo.map:draw(mapViewport, { x=0, y=0 })
-  -- Player
-  love.graphics.setColor(clr.LGREEN)
-  --dbg.printf("DRAW: %f,%f", pos.x, pos.y)
-  local playerSizePct = 0.6
-  local playerSize = tileSize.scale(playerSizePct)
-  local playerIntraTileOffset =
-    tileSize.sub(playerSize).scale(.5)
-  local playerRectDisplayOffset =
-    playerTileDisplayOffset.add(playerIntraTileOffset)
-  rect("fill", playerRectDisplayOffset, playerSize)
-  --print(string.format("Player: (%d,%d,%d,%d)",
-  --  playerRectDisplayOffset.x, playerRectDisplayOffset.y,
-  --  playerSize.w, playerSize.h))
+  glo.map:draw(mapViewport, pos)
+  -- Sidebar
+  local orientation = "V"
+  if shortDimension == love.graphics.getWidth() then
+    orientation = "H"
+  end
   love.graphics.print("Current FPS: "..tostring(love.timer.getFPS()), 2, 2)
 end
 

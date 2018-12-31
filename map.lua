@@ -17,6 +17,8 @@ local TILES = {
   { id=4, c=clr.YELLOW, pass=true },
 }
 
+local playerSprite = nil
+
 function printf(fmt, ...)
   local message = string.format(fmt, ...)
   print(message)
@@ -34,6 +36,7 @@ function module.loadMap()
   buildTileGrid(map)
   buildDisplayGrid(map)
   buildRandomMap(map)
+  playerSprite = buildPlayerSprite(map)
   return map
 end
 
@@ -44,6 +47,27 @@ function addMethods(map)
   map.update = updateDisplayGrid
   map.draw = drawMap
   return map
+end
+
+function buildPlayerSprite(map)
+  local playerSizePct = 0.6
+  local playerSize = map.tileSize.scale(playerSizePct)
+  local offset = map.tileSize.sub(playerSize).scale(.5)
+  local cvs = love.graphics.newCanvas(map.tileSize.unpack())
+  cvs:renderTo(function()
+    love.graphics.setColor(clr.LGREEN)    
+    rect("fill", offset, playerSize)
+  end)
+  --local img = cvs:newImageData()
+  --if cvs.release then cvs:release() end
+  --return img
+  return cvs
+end
+
+function rect(mode, pos, size)
+  local x, y = pos.unpack()
+  local w, h = size.unpack()
+  love.graphics.polygon(mode, x, y, x+w, y, x+w, y+h, x, y+h)
 end
 
 function getTileSize(map)
@@ -99,8 +123,9 @@ end
 
 function buildDisplayGrid(map)
   map.display = {}
-  local screenSize = PxSize(love.graphics.getDimensions())
-  local minScreenSizeCx = screenSize.toCx(map.tileSize)
+  local shortDimension = math.min(love.graphics.getDimensions())
+  local mapDisplaySize = PxSize(shortDimension, shortDimension)
+  local minScreenSizeCx = mapDisplaySize.toCx(map.tileSize)
   local padding = 2 * MAP_DISPLAY_EXTRA_CELLS
   local paddedScreenSizeCx = minScreenSizeCx.add(CxSize(padding, padding))
   local paddedScreenCellCount = paddedScreenSizeCx.cxW * paddedScreenSizeCx.cxH
@@ -131,11 +156,11 @@ function buildRandomMap(map)
   end
 end
 
-function updateDisplayGrid(map, viewport)
+function updateDisplayGrid(map, viewport, playerMapOffsetPx)
   assert(map)
   assert(viewport)
   --printf("VP map offset: XY=%d,%d", viewport.mapOffset.unpack())
-  if updateDgViewAndDetectChange(map, viewport) then
+  if updateDgViewAndDetectChange(map, viewport, playerMapOffsetPx) then
     --print("UPDATE.")
     --pldump({ vp = viewport, dv = map.display.view })
     local dv = map.display.view
@@ -146,9 +171,12 @@ function updateDisplayGrid(map, viewport)
   end
 end
 
-function updateDgViewAndDetectChange(map, viewport)
+function updateDgViewAndDetectChange(map, viewport, playerMapOffsetPx)
+  assert(map)
+  assert(viewport)
+  assert(playerMapOffsetPx)
   -- TODO: Redraw only when view extends past drawn area.
-  local rc = viewport.mapOffset.toCx(map.tileSize)
+  local rc = viewport.mapOffset.toCx(map.tileSize).sub(CxSize(1, 1))
   local r, c = rc.unpack()
   -- Converting back to pixels, we get the position rounded
   -- down to a cell boundary. Subtracting viewport.mapOffset,
@@ -158,12 +186,15 @@ function updateDgViewAndDetectChange(map, viewport)
   local oldView = map.display.view
   map.display.view = { r=r, c=c, y=xy.y, x=xy.x }
   --printf("OLD: RC=%d,%d; NEW: RC=%d,%d", oldView.r or -99, oldView.c or -99, r, c)
+  map.display.playerScreenPos = playerMapOffsetPx
+    .sub(viewport.mapOffset)
+    .add(viewport.screenOffset)
   return not (r == oldView.r and c == oldView.c)
 end
 
 function updateDisplaySpriteBatch(map, viewport)
   print("updateDisplaySpriteBatch")
-  local displaySizeCx = viewport.screenSize.toCxCeil(map.tileSize)
+  local displaySizeCx = viewport.displaySize.toCxCeil(map.tileSize)
     .add(CxSize(1,1)) -- XXX
   local sb = map.display.spriteBatch
   local dv = map.display.view
@@ -195,17 +226,18 @@ function updateDisplaySpriteBatch(map, viewport)
   --printf("Cells: %d x %d", #(map.cells), #(map.cells[1]))
 end
 
-function drawMap(map, viewport)
+function drawMap(map, viewport, playerMapOffsetPx)
   assert(map)
   assert(viewport)
   assert(viewport.screenOffset.t == "PxPos")
-  assert(viewport.screenSize.t == "PxSize")
+  assert(viewport.displaySize.t == "PxSize")
   assert(viewport.mapOffset.t == "PxPos")
-  updateDisplayGrid(map, viewport)
+  updateDisplayGrid(map, viewport, playerMapOffsetPx)
   local dv = map.display.view
   --pldump({viewport.screenOffset.unpack()})
   --pldump(dv)
-  love.graphics.draw(map.display.canvas, -dv.x, -dv.y)
+  love.graphics.draw(map.display.canvas, dv.x, dv.y)
+  love.graphics.draw(playerSprite, map.display.playerScreenPos.unpack())
 end
 
 function nextPowerOf2(n)

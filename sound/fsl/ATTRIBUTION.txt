@@ -1,6 +1,7 @@
 Fantasy Sound Library, by Little Robot Sound Factory
 
 Copyright/Attribution Notice: 
+CC-BY 3.0
 Attribute Little Robot Sound Factory, and provide this link where possible:
 www.littlerobotsoundfactory.com
 
