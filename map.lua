@@ -56,7 +56,7 @@ function buildPlayerSprite(map)
   local cvs = love.graphics.newCanvas(map.tileSize.unpack())
   cvs:renderTo(function()
     love.graphics.setColor(clr.LGREEN)    
-    rect("fill", offset, playerSize)
+    module._rect("fill", offset, playerSize)
   end)
   --local img = cvs:newImageData()
   --if cvs.release then cvs:release() end
@@ -64,7 +64,7 @@ function buildPlayerSprite(map)
   return cvs
 end
 
-function rect(mode, pos, size)
+function module._rect(mode, pos, size)
   local x, y = pos.unpack()
   local w, h = size.unpack()
   love.graphics.polygon(mode, x, y, x+w, y, x+w, y+h, x, y+h)
@@ -236,8 +236,12 @@ function drawMap(map, viewport, playerMapOffsetPx)
   local dv = map.display.view
   --pldump({viewport.screenOffset.unpack()})
   --pldump(dv)
-  love.graphics.draw(map.display.canvas, dv.x, dv.y)
+  local x, y = viewport.screenOffset.unpack()
+  local w, h = viewport.displaySize.unpack()
+  love.graphics.setScissor(x, y, w, h)
+  love.graphics.draw(map.display.canvas, viewport.screenOffset.unpack())
   love.graphics.draw(playerSprite, map.display.playerScreenPos.unpack())
+  love.graphics.setScissor()
 end
 
 function nextPowerOf2(n)

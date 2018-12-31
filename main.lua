@@ -192,7 +192,8 @@ end
 function love.draw()
   local p = glo.player
   -- Calculations
-  local shortDimension = math.min(love.graphics.getDimensions())
+  local screenWidth, screenHeight = love.graphics.getDimensions()
+  local shortDimension = math.min(screenWidth, screenHeight)
   local mapDisplaySize = PxSize(shortDimension, shortDimension)
   local center = mapDisplaySize.scale(.5)
   local tileSize = glo.map:getTileSize()
@@ -209,17 +210,17 @@ function love.draw()
   love.graphics.setColor(clr.WHITE)
   glo.map:draw(mapViewport, pos)
   -- Sidebar
+  love.graphics.setColor(150,150,150)
   local orientation = "V"
-  if shortDimension == love.graphics.getWidth() then
-    orientation = "H"
+  if shortDimension == screenWidth then orientation = "H" end
+  local rect = love.graphics.rectangle
+  if orientation == "V" then
+    rect("fill", shortDimension, 0, screenWidth-shortDimension, screenHeight)
+  else
+    rect("fill", 0, shortDimension, screenWidth, screenHeight-shortDimension)
   end
+  love.graphics.setColor(clr.LGREEN)
   love.graphics.print("Current FPS: "..tostring(love.timer.getFPS()), 2, 2)
-end
-
-function rect(mode, pos, size)
-  local x, y = pos.unpack()
-  local w, h = size.unpack()
-  love.graphics.polygon(mode, x, y, x+w, y, x+w, y+h, x, y+h)
 end
 
 function netReceiveEvent(event)
