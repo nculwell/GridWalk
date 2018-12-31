@@ -84,6 +84,7 @@ function toggleFullscreen()
   dump(newFlags)
   print(screenW.."x"..screenH)
   love.window.setMode(screenW, screenH, newFlags)
+  -- TODO: Trigger resizing and redraw of buffers.
 end
 
 function love.update(dt)

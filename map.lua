@@ -6,6 +6,7 @@ local clr = require("color")
 local coords = require("coords")
 local PxPos, CxPos, PxSize, CxSize =
   coords.PxPos, coords.CxPos, coords.PxSize, coords.CxSize
+local mapgen = require("randommap")
 
 local MAP_SIZE = CxSize(20, 20)
 local MAP_DISPLAY_EXTRA_CELLS = 2
@@ -35,7 +36,7 @@ function module.loadMap()
   printf("TileSize: %d x %d", map.tileSize.unpack())
   buildTileGrid(map)
   buildDisplayGrid(map)
-  buildRandomMap(map)
+  mapgen.buildRandomMap(seed, map.tiles, map.size)
   playerSprite = buildPlayerSprite(map)
   return map
 end
@@ -137,23 +138,6 @@ function buildDisplayGrid(map)
   map.display.spriteBatch =
     love.graphics.newSpriteBatch(map.tilesetImage, paddedScreenCellCount)
   map.display.view = { r=nil, c=nil }
-end
-
-function buildRandomMap(map)
-  map.cells = {}
-  for r = 1, map.size.cxH do
-    map.cells[r] = {}
-    for c = 1, map.size.cxW do
-      local cell = {}
-      if r == 1 or r == map.size.cxH or c == 1 or c == map.size.cxW then
-        cell.t = map.tiles[1]
-      else
-        local i = math.random(2, table.getn(map.tiles))
-        cell.t = map.tiles[i]
-      end
-      map.cells[r][c] = cell
-    end
-  end
 end
 
 function updateDisplayGrid(map, viewport, playerMapOffsetPx)
