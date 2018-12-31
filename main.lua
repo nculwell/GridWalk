@@ -30,7 +30,6 @@ local glo = {
   player = {
     mov = { prv=START_POS, nxt=START_POS, dst={pos=START_POS} }
   },
-  moveKeys = {}
 }
 
 local function dump(z)
@@ -50,12 +49,25 @@ function love.load()
   dbg.init("gridwalk.log")
   glo.map = map.loadMap()
   inputModule.load()
-  for s = 1, 8 do
-    local filename = "sound/fsl/Footstep_Dirt_0"..(s-1)..".mp3"
-    local sd = love.sound.newSoundData(filename)
-    footsteps[s] = love.audio.newSource(sd)
+  loadFootsteps()
+end
+
+local footstepsLoadInfo = {
+  water = { fn="sound/fsl/Footstep_Water_%02d.mp3", n=8 },
+  dirt  = { fn="sound/fsl/Footstep_Dirt_%02d.mp3", n=10 },
+}
+
+function loadFootsteps()
+  for k in pairs(footstepsLoadInfo) do
+    footsteps[k] = {}
+    local fli = footstepsLoadInfo[k]
+    for s = 1, fli.n do
+      local filename = string.format(fli.fn, s-1)
+      local sd = love.sound.newSoundData(filename)
+      footsteps[k][s] = love.audio.newSource(sd)
+    end
+    footsteps[k].next = 1
   end
-  footsteps.next = 1
 end
 
 -- Map input events to the input module.
@@ -92,15 +104,16 @@ function love.update(dt)
       local moveCmd = CxSize(moveXY.x, moveXY.y)
       if not (moveXY.x == 0 and moveXY.y == 0) then
         --pl.pretty.dump(moveCmd)
-        dst = computeMovDst(glo.player, moveCmd, MOVES_PER_TILE)
+        local dst = computeMovDst(glo.player, moveCmd, MOVES_PER_TILE)
         if dst then
           printf("MOVING: (%d, %d), ticks=%d", dst.pos.r, dst.pos.c, dst.ticks)
           --pldump({ dst=dst })
           p.mov.dst = dst
-          --pldump(footsteps)
-          love.audio.play(footsteps[footsteps.next])
-          footsteps.next = footsteps.next + 1
-          if footsteps.next > #footsteps then footsteps.next = 1 end
+          -- TODO: Pick appropriate footsteps for tile.
+          local fs = footsteps["dirt"]
+          love.audio.play(fs[fs.next])
+          fs.next = fs.next + 1
+          if fs.next > #fs then fs.next = 1 end
         end
       end
     end

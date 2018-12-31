@@ -11,10 +11,10 @@ local MAP_SIZE = CxSize(20, 20)
 local MAP_DISPLAY_EXTRA_CELLS = 2
 
 local TILES = {
-  { id=1, c=clr.BLUE, pass=false },
-  { id=2, c=clr.LBLUE, pass=true },
-  { id=3, c=clr.GREEN, pass=true },
-  { id=4, c=clr.YELLOW, pass=true },
+  { id=1, c=clr.BLUE, pass=false, fs="water" },
+  { id=2, c=clr.LBLUE, pass=true, fs="water" },
+  { id=3, c=clr.GREEN, pass=true, fs="dirt" },
+  { id=4, c=clr.YELLOW, pass=true, fs="dirt" },
 }
 
 local playerSprite = nil
@@ -67,7 +67,8 @@ end
 function module._rect(mode, pos, size)
   local x, y = pos.unpack()
   local w, h = size.unpack()
-  love.graphics.polygon(mode, x, y, x+w, y, x+w, y+h, x, y+h)
+  --love.graphics.polygon(mode, x, y, x+w, y, x+w, y+h, x, y+h)
+  love.graphics.rectangle(mode, x, y, w, h)
 end
 
 function getTileSize(map)
@@ -113,8 +114,7 @@ function buildTileGrid(map)
         tile.quad = love.graphics.newQuad(x, y,
           map.tileSize.pxW, map.tileSize.pxH, canvasSize, canvasSize)
         love.graphics.setColor(tile.c)
-        love.graphics.rectangle("fill", x, y,
-          x + map.tileSize.pxW, y + map.tileSize.pxH)
+        love.graphics.rectangle("fill", x, y, map.tileSize.unpack())
       end
     end
   end)
