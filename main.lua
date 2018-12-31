@@ -14,7 +14,6 @@ pl.app = require("pl.app")
 pldump = pl.pretty.dump
 
 local mapH = 20
---local TICKS_PER_SECOND = 10
 local TICKS_PER_SECOND = 10
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
 local MOVES_PER_TILE = 3

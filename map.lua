@@ -6,7 +6,7 @@ local clr = require("color")
 local coords = require("coords")
 local PxPos, CxPos, PxSize, CxSize =
   coords.PxPos, coords.CxPos, coords.PxSize, coords.CxSize
-local mapgen = require("randommap")
+local mapgen = require("mapgen")
 
 local MAP_SIZE = CxSize(20, 20)
 local MAP_DISPLAY_EXTRA_CELLS = 2
