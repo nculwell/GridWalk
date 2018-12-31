@@ -17,7 +17,7 @@ local mapH = 20
 local TICKS_PER_SECOND = 10
 local SECS_PER_TICK = 1/TICKS_PER_SECOND
 local MOVES_PER_TILE = 3
-local START_POS = CxPos(1, 1)
+local START_POS = CxPos(2, 2)
 local VSYNC = false
 local FULLSCREENTYPE = "desktop"
 -- local FULLSCREENTYPE = "exclusive"
@@ -114,8 +114,9 @@ function computeMovDst(c, moveCmdCx, ticks)
   --pl.pretty.dump({x,y})
   --pl.pretty.dump(glo.map.tiles[y+1])
   local destCell = glo.map:cellAt(moveToCx.unpack())
-  if not (destCell and not destCell.t.pass) then
+  if not (destCell and destCell.t.pass) then
     printf("SKIP: RC=%d,%d", moveToCx.unpack())
+    return nil
   end
   return { pos=moveToCx, ticks=ticks }
 end
@@ -219,8 +220,9 @@ function love.draw()
   else
     rect("fill", 0, shortDimension, screenWidth, screenHeight-shortDimension)
   end
+  -- FPS counter
   love.graphics.setColor(clr.LGREEN)
-  love.graphics.print("Current FPS: "..tostring(love.timer.getFPS()), 2, 2)
+  love.graphics.print("Current FPS: "..love.timer.getFPS(), 2, 2)
 end
 
 function netReceiveEvent(event)
