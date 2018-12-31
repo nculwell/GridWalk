@@ -10,6 +10,7 @@ local mapgen = require("randommap")
 
 local MAP_SIZE = CxSize(20, 20)
 local MAP_DISPLAY_EXTRA_CELLS = 2
+local DEFAULT_MAP_SEED = 55
 
 local TILES = {
   { id=1, c=clr.BLUE, pass=false, fs="water" },
@@ -25,12 +26,11 @@ function printf(fmt, ...)
   print(message)
 end
 
-function module.loadMap()
+function module.loadMap(randomMapSeed)
   local map = addMethods({})
   map.tiles = TILES
-  seed = os.time()
+  local seed = randomMapSeed or DEFAULT_MAP_SEED
   print("Map seed: "..seed)
-  math.randomseed(seed)
   map.size = MAP_SIZE
   map.tileSize = PxSize(40, 40)
   printf("TileSize: %d x %d", map.tileSize.unpack())

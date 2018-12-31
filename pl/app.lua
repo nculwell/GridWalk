@@ -6,7 +6,6 @@
 
 local io,package,require = _G.io, _G.package, _G.require
 local utils = require 'pl.utils'
-local path = require 'pl.path'
 
 local app = {}
 
@@ -18,77 +17,6 @@ function app.script_name()
         return _G.arg[0]
     end
     return utils.raise("No script name found")
-end
-
---- add the current script's path to the Lua module path.
--- Applies to both the source and the binary module paths. It makes it easy for
--- the main file of a multi-file program to access its modules in the same directory.
--- `base` allows these modules to be put in a specified subdirectory, to allow for
--- cleaner deployment and resolve potential conflicts between a script name and its
--- library directory.
--- @string base optional base directory.
--- @treturn string the current script's path with a trailing slash
-function app.require_here (base)
-    local p = path.dirname(app.script_name())
-    if not path.isabs(p) then
-        p = path.join(path.currentdir(),p)
-    end
-    if p:sub(-1,-1) ~= path.sep then
-        p = p..path.sep
-    end
-    if base then
-        base = path.normcase(base)
-        if path.isabs(base) then
-            p = base .. path.sep
-        else
-            p = p..base..path.sep
-        end
-    end
-    local so_ext = path.is_windows and 'dll' or 'so'
-    local lsep = package.path:find '^;' and '' or ';'
-    local csep = package.cpath:find '^;' and '' or ';'
-    package.path = ('%s?.lua;%s?%sinit.lua%s%s'):format(p,p,path.sep,lsep,package.path)
-    package.cpath = ('%s?.%s%s%s'):format(p,so_ext,csep,package.cpath)
-    return p
-end
-
---- return a suitable path for files private to this application.
--- These will look like '~/.SNAME/file', with '~' as with expanduser and
--- SNAME is the name of the script without .lua extension.
--- If the directory does not exist, it will be created.
--- @string file a filename (w/out path)
--- @return a full pathname, or nil
--- @return cannot create directory error
--- @usage
--- -- when run from a script called 'testapp' (on Windows):
--- local app = require 'pl.app'
--- print(app.appfile 'test.txt')
--- -- C:\Documents and Settings\steve\.testapp\test.txt
-function app.appfile(file)
-    local sfullname, err = app.script_name()
-    if not sfullname then return utils.raise(err) end
-    local sname = path.basename(sfullname)
-    local name = path.splitext(sname)
-    local dir = path.join(path.expanduser('~'),'.'..name)
-    if not path.isdir(dir) then
-        local ret = path.mkdir(dir)
-        if not ret then return utils.raise('cannot create '..dir) end
-    end
-    return path.join(dir,file)
-end
-
---- return string indicating operating system.
--- @return 'Windows','OSX' or whatever uname returns (e.g. 'Linux')
-function app.platform()
-    if path.is_windows then
-        return 'Windows'
-    else
-        local f = io.popen('uname')
-        local res = f:read()
-        if res == 'Darwin' then res = 'OSX' end
-        f:close()
-        return res
-    end
 end
 
 --- return the full command-line used to invoke this script.

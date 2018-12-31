@@ -43,13 +43,14 @@ end
 
 function love.load()
   print()
-  local flags, args = pl.app.parse_args()
+  local flags, args = pl.app.parse_args(nil, {"seed"})
+  local seed = flags["seed"]
   toggleFullscreen()
   love.window.setTitle("Wandrix")
   glo.startTime = love.timer.getTime()
   glo.nextTickTime = 0
   dbg.init("gridwalk.log")
-  glo.map = map.loadMap()
+  glo.map = map.loadMap(seed)
   inputModule.load()
   loadFootsteps()
 end
